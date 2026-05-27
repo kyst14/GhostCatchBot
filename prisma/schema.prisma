@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          BigInt           @id @unique
+  username    String
+
+  connId      String           @unique
+
+  chats       Chat[]           @relation("UserChats")
+  messages    Message[]
+}
+
+model Chat {
+  id          BigInt           @id
+
+  users       User[]           @relation("UserChats")
+  messages    Message[]
+}
+
+model Message {
+  id          BigInt           @id
+  type        MessageType
+  content     String
+  createdAt   DateTime         @default(now())
+
+  // Foreign keys
+  chatId      BigInt
+  ownId       BigInt
+  senderName  String
+
+  // Relations
+  chat        Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  own         User             @relation(fields: [ownId], references: [id])
+}
+
+enum MessageType {
+  TEXT
+  MEDIA
+}
