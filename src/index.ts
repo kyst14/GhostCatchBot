@@ -1,13 +1,11 @@
+import { getBot, infoBot, startBot, WEBHOOK } from '@/bot.js'
 import express from 'express'
 import { webhookCallback } from 'grammy'
-import { getBot, infoBot, startBot, WEBHOOK } from '@/bot.js'
 
 const app = express()
 const bot = getBot()
 
-const PORT = process.env.PORT ?
-	Number(process.env.PORT) :
-	3000
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000
 
 const HOST = process.env.HOST || '0.0.0.0'
 
@@ -27,6 +25,9 @@ if (WEBHOOK) {
 }
 
 app.listen(PORT, HOST, () => {
-	console.log('🚀 Server started')
+	console.log('🚀 Server started: ')
+
+	console.log('http://localhost:' + PORT)
+
 	startBot()
 })
