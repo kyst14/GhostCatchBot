@@ -21,29 +21,9 @@ if (!BOT_TOKEN) {
 
 const bot = new Bot(BOT_TOKEN)
 
-async function isOwn(ctx: Context): Promise<boolean> {
-	const connId = ctx.businessConnectionId
-	if (!connId) return false
-
-	const senderId = ctx.businessMessage?.from?.id
-	if (!senderId) return false
-
-	try {
-		const exists = await prisma.user.count({
-			where: {
-				id: senderId,
-				connId: connId,
-			},
-		})
-		return exists > 0
-	} catch (error) {
-		throw error
-		return false
-	}
-}
-
 bot.command('start', async ctx => {
-	await ctx.reply(
+	return await ctx.reply(
+	
 		'👋 Привет, я <b>Ghost Catcher</b>! Подключи меня к Business аккаунту и я заработаю!',
 		{ parse_mode: 'HTML' }
 	)
@@ -79,11 +59,22 @@ bot.on('business_connection', async ctx => {
 })
 
 // Новое сообщение в Business чате
-bot.on('business_message', async ctx => {
+bot.on('business_message:text', async ctx => {
 	const msg = ctx.businessMessage!
 
-	const isOwnMessage = false //await isOwn(ctx)
-	if (isOwnMessage || !msg.text) {
+	const { id: ownId } = (await prisma.user.findFirst({
+		where: {
+			connId: ctx.businessConnectionId!,
+		},
+		select: {
+			id: true,
+		},
+	}))!
+
+	if (!ownId) return
+
+	const isOwnMessage = true // await isOwn(ctx)
+	if (isOwnMessage) {
 		return
 	}
 
@@ -92,10 +83,10 @@ bot.on('business_message', async ctx => {
 	// Save new message
 	await prisma.message.create({
 		data: {
-			id: msg.message_id,
-			type: msg.text ? 'TEXT' : 'MEDIA',
+			tgId: msg.message_id,
+			type: 'TEXT',
 			content: encryptText(msg.text || '', {
-				id: msg.from.id,
+				id: msg.message_id,
 				createdAt: createdAt,
 			}),
 			createdAt: createdAt,
@@ -106,7 +97,7 @@ bot.on('business_message', async ctx => {
 			},
 			senderName: msg.from.username || msg.from.first_name,
 			own: {
-				connect: { connId: ctx.businessConnectionId! },
+				connect: { id: ownId },
 			},
 		},
 	})
@@ -118,13 +109,13 @@ bot.on('edited_business_message', async ctx => {
 
 	const original = await prisma.message.findFirst({
 		where: {
-			id: msg.message_id,
+			tgId: msg.message_id,
 		},
 	})
 	if (!original) return
 
 	const decrypted = decryptText(original.content, {
-		id: original.id,
+		id: original.tgId,
 		createdAt: original.createdAt,
 	})
 	if (!decrypted) return
@@ -137,16 +128,16 @@ bot.on('edited_business_message', async ctx => {
 				`<b>Новое:</b> ${msg.text}\n`,
 			{
 				parse_mode: 'HTML',
-			},
+			}
 		)
 
 		await prisma.message.update({
 			where: {
-				id: msg.message_id,
+				id: original.id,
 			},
 			data: {
 				content: encryptText(msg.text!, {
-					id: msg.from.id,
+					id: msg.message_id,
 					createdAt: new Date(msg.date * 1000),
 				}),
 			},
@@ -155,11 +146,11 @@ bot.on('edited_business_message', async ctx => {
 })
 
 // Message deleted
-bot.on('deleted_business_messages', async ctx => { // TODO
+bot.on('deleted_business_messages', async ctx => {
+	// TODO
 	const deleted = ctx.deletedBusinessMessages!
 
 	for (const msgId of deleted.message_ids) {
-		
 	}
 })
 
@@ -237,4 +228,12 @@ async function connectChat(ctx: Context) {
 			id: ctx.businessMessage?.chat.id,
 		},
 	})
+}
+
+async function isOwn(ctx: Context): Promise<boolean> {
+	const conn = await ctx.getBusinessConnection();
+	const user = conn.user;
+
+	if (!user) return false;
+	return user.id === ctx.businessMessage?.from?.id
 }

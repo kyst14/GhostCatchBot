@@ -24,7 +24,8 @@ model Chat {
 }
 
 model Message {
-  id          BigInt           @id
+  id          Int              @id @default(autoincrement())
+  tgId        BigInt
   type        MessageType
   content     String
   createdAt   DateTime         @default(now())
