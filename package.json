@@ -5,8 +5,9 @@
 	"private": true,
 	"scripts": {
 		"dev": "nodemon --exec tsx src/index.ts",
-		"build": "tsc && tsc-alias",
-		"start": "node dist/src/index.js"
+		"build": "npm run prisma && tsc && tsc-alias",
+		"start": "node dist/src/index.js",
+		"prisma": "npx prisma generate"
 	},
 	"peerDependencies": {
 		"typescript": "^6.0.3"
