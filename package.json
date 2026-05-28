@@ -5,7 +5,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "nodemon --exec tsx src/index.ts",
-		"build": "npm run prisma && tsc && tsc-alias",
+		"build": "npm run prisma && tsc && tsc-alias && npm run copy:assets",
+		"copy:assets": "cpx \"src/site/**/*\" dist/src/site",
 		"start": "node dist/src/index.js",
 		"prisma": "npx prisma generate"
 	},
@@ -26,6 +27,7 @@
 		"ts-node": "^10.9.2"
 	},
 	"devDependencies": {
+		"cpx": "^1.5.0",
 		"nodemon": "^3.1.14",
 		"prisma": "^7.8.0",
 		"tsc-alias": "^1.8.17",
