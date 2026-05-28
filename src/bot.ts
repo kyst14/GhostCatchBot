@@ -23,7 +23,6 @@ const bot = new Bot(BOT_TOKEN)
 
 bot.command('start', async ctx => {
 	return await ctx.reply(
-	
 		'👋 Привет, я <b>Ghost Catcher</b>! Подключи меня к Business аккаунту и я заработаю!',
 		{ parse_mode: 'HTML' }
 	)
@@ -42,7 +41,7 @@ bot.on('business_connection', async ctx => {
 
 	// Send welcome message
 	if (conn.is_enabled) {
-		await ctx.api.sendMessage(
+		return await ctx.api.sendMessage(
 			ctx.businessConnection.user.id,
 			`👋 Привет, ${conn.user.first_name}!\n` +
 				`Вы подключились к Business аккаунту.\n` +
@@ -59,49 +58,49 @@ bot.on('business_connection', async ctx => {
 })
 
 // Новое сообщение в Business чате
-bot.on('business_message:text', async ctx => {
-	const msg = ctx.businessMessage!
+bot.on('business_message:text').filter(
+	async ctx => {
+		return !(await isOwn(ctx))
+	},
+	async ctx => {
+		const msg = ctx.businessMessage!
 
-	const { id: ownId } = (await prisma.user.findFirst({
-		where: {
-			connId: ctx.businessConnectionId!,
-		},
-		select: {
-			id: true,
-		},
-	}))!
+		const { id: ownId } = (await prisma.user.findFirst({
+			where: {
+				connId: ctx.businessConnectionId!,
+			},
+			select: {
+				id: true,
+			},
+		}))!
 
-	if (!ownId) return
+		const createdAt = new Date(msg.date * 1000)
 
-	const isOwnMessage = true // await isOwn(ctx)
-	if (isOwnMessage) {
-		return
-	}
-
-	const createdAt = new Date(msg.date * 1000)
-
-	// Save new message
-	await prisma.message.create({
-		data: {
-			tgId: msg.message_id,
-			type: 'TEXT',
-			content: encryptText(msg.text || '', {
-				id: msg.message_id,
+		// Save new message
+		await prisma.message.create({
+			data: {
+				tgId: msg.message_id,
+				type: 'TEXT',
+				content: encryptText(msg.text || '', {
+					id: msg.message_id,
+					createdAt: createdAt,
+				}),
 				createdAt: createdAt,
-			}),
-			createdAt: createdAt,
-			chat: {
-				connect: {
-					id: msg.chat.id,
+				chat: {
+					connect: {
+						id: msg.chat.id,
+					},
+				},
+				senderName: msg.from.username || msg.from.first_name,
+				own: {
+					connect: { id: ownId },
 				},
 			},
-			senderName: msg.from.username || msg.from.first_name,
-			own: {
-				connect: { id: ownId },
-			},
-		},
-	})
-})
+		})
+
+		return;
+	}
+)
 
 // Message edited
 bot.on('edited_business_message', async ctx => {
@@ -123,9 +122,11 @@ bot.on('edited_business_message', async ctx => {
 	if (original) {
 		await bot.api.sendMessage(
 			original.ownId.toString(),
-			`📝 <b>${original.senderName} изменил(а) сообщение: </b>\n\n` +
-				`<b>Оригинал:</b> ${decrypted}\n\n` +
-				`<b>Новое:</b> ${msg.text}\n`,
+			`📝 <b>@${original.senderName} изменил(а) сообщение: </b>\n\n` +
+				`<b>Старое:</b>` +
+				`<blockquote>${decrypted}</blockquote>\n\n`+
+				`<b>Новое:</b> `+
+				`<blockquote>${msg.text}</blockquote>\n`,
 			{
 				parse_mode: 'HTML',
 			}
@@ -143,15 +144,38 @@ bot.on('edited_business_message', async ctx => {
 			},
 		})
 	}
+
+	return
 })
 
 // Message deleted
 bot.on('deleted_business_messages', async ctx => {
-	// TODO
 	const deleted = ctx.deletedBusinessMessages!
 
 	for (const msgId of deleted.message_ids) {
+		const original = await prisma.message.findFirst({
+			where: {
+				tgId: msgId,
+			},
+		})
+		if (!original) return
+
+		await bot.api.sendMessage(
+			original.ownId.toString(),
+			`❌ <b>@${original.senderName} удалил(а) сообщение: </b>\n\n` +
+				`<b>Оригинал:</b>` +
+				`<blockquote>${decryptText(original.content, {
+						id: original.tgId,
+						createdAt: original.createdAt,
+					}).trim()}
+				</blockquote>`,
+			{
+				parse_mode: 'HTML',
+			}
+		)
 	}
+
+	return
 })
 
 bot.catch(err => {
@@ -184,6 +208,8 @@ export async function startBot() {
 			` - First name: ${bot.botInfo.first_name}\n` +
 			` - Webhook: ${WEBHOOK}\n`
 	)
+
+	return
 }
 
 export function infoBot() {
@@ -231,9 +257,9 @@ async function connectChat(ctx: Context) {
 }
 
 async function isOwn(ctx: Context): Promise<boolean> {
-	const conn = await ctx.getBusinessConnection();
-	const user = conn.user;
+	const conn = await ctx.getBusinessConnection()
+	const user = conn.user
 
-	if (!user) return false;
-	return user.id === ctx.businessMessage?.from?.id
+	if (!user) return false
+	return false //user.id === ctx.businessMessage?.from?.id
 }
