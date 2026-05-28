@@ -1,4 +1,4 @@
-import { getBot, infoBot, startBot, WEBHOOK } from '@/bot.js'
+import { getBot, infoBot, startBot, WEBHOOK } from '@/lib/bot.js'
 import express from 'express'
 import { webhookCallback } from 'grammy'
 

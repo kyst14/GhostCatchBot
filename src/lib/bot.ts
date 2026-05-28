@@ -1,7 +1,7 @@
+import prisma from '@/lib/db.js'
 import 'dotenv/config'
 import { Bot, Context } from 'grammy'
 import type { BusinessConnection } from 'grammy/types'
-import prisma from './db.js'
 import { decryptText, encryptText } from './encryption.js'
 
 const isDev = process.env.NODE_ENV !== 'production'
@@ -31,9 +31,16 @@ bot.command('start', async ctx => {
 
 bot.use(async (ctx, next) => {
 	const conn = ctx.businessConnection
+	const msg = ctx.businessMessage
 	await connectUser(conn)
 	await connectChat(ctx)
-	next()
+
+	if (msg) {
+		await touchChat(msg.chat.id)
+		await touchMessage(msg.message_id)
+	}
+
+	return await next()
 })
 
 // Ловим подключение бота к Business аккаунту
@@ -87,15 +94,16 @@ bot.on('business_message:text').filter(
 					createdAt: createdAt,
 				}),
 				createdAt: createdAt,
+				senderName: msg.from.username || msg.from.first_name,
 				chat: {
 					connect: {
 						id: msg.chat.id,
 					},
 				},
-				senderName: msg.from.username || msg.from.first_name,
 				own: {
 					connect: { id: ownId },
 				},
+				expiresAt: new Date(msg.date * 1000 + 24 * 60 * 60 * 1000),
 			},
 		})
 
@@ -196,7 +204,7 @@ export async function startBot() {
 	await bot.init()
 	if (WEBHOOK) {
 		res = await bot.api.setWebhook(WEBHOOK.toString())
-		console.log("📡 setWebhook response:", res)
+		console.log('📡 setWebhook response:', res)
 	} else {
 		await bot.api.deleteWebhook()
 		bot.start()
@@ -256,6 +264,8 @@ async function connectChat(ctx: Context) {
 		update: {},
 		create: {
 			id: ctx.businessMessage?.chat.id,
+			lastAccessedAt: new Date(),
+			expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
 		},
 	})
 }
@@ -266,4 +276,33 @@ async function isOwn(ctx: Context): Promise<boolean> {
 
 	if (!user) return false
 	return user.id === ctx.businessMessage?.from?.id
+}
+
+// Touch
+async function touchMessage(id: string | number) {
+	const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+
+	await prisma.message.updateMany({
+		where: {
+			id: Number(id),
+		},
+		data: {
+			lastAccessedAt: new Date(),
+			expiresAt,
+		},
+	})
+}
+
+async function touchChat(id: string | number) {
+	const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+
+	await prisma.chat.updateMany({
+		where: {
+			id: Number(id),
+		},
+		data: {
+			lastAccessedAt: new Date(),
+			expiresAt,
+		},
+	})
 }
