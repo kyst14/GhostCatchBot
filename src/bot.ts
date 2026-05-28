@@ -265,5 +265,5 @@ async function isOwn(ctx: Context): Promise<boolean> {
 	const user = conn.user
 
 	if (!user) return false
-	return false //user.id === ctx.businessMessage?.from?.id
+	return user.id === ctx.businessMessage?.from?.id
 }
