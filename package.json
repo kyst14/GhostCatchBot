@@ -5,10 +5,11 @@
 	"private": true,
 	"scripts": {
 		"dev": "nodemon --exec tsx src/index.ts",
-		"build": "npm run prisma && tsc && tsc-alias && npm run copy:assets",
-		"copy:assets": "cpx \"src/site/**/*\" dist/src/site",
+		"build": "bun run build:ts && bun run build:assets",
+		"build:ts": "prisma generate && tsc && tsc-alias",
+		"build:assets": "cpx \"src/site/**/*\" dist/src/site",
 		"start": "node dist/src/index.js",
-		"prisma": "npx prisma generate"
+		"prisma": "bunx prisma generate"
 	},
 	"peerDependencies": {
 		"typescript": "^6.0.3"

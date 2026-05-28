@@ -9,9 +9,10 @@ const isDev = process.env.NODE_ENV !== 'production'
 // Bot config
 const BOT_TOKEN = process.env.BOT_TOKEN
 const ADMIN_ID = process.env.ADMIN_ID
-export const WEBHOOK: URL | null = !isDev
-	? new URL(process.env.WEBHOOK_SECRET!, process.env.BASE_URL!)
-	: null
+export const WEBHOOK: URL | null =
+	!isDev && process.env.WEBHOOK_SECRET && process.env.BASE_URL
+		? new URL(process.env.WEBHOOK_SECRET, process.env.BASE_URL)
+		: null
 
 if (!BOT_TOKEN) {
 	throw new Error('BOT_TOKEN is not defined')
@@ -98,7 +99,7 @@ bot.on('business_message:text').filter(
 			},
 		})
 
-		return;
+		return
 	}
 )
 
@@ -124,8 +125,8 @@ bot.on('edited_business_message', async ctx => {
 			original.ownId.toString(),
 			`📝 <b>@${original.senderName} изменил(а) сообщение: </b>\n\n` +
 				`<b>Старое:</b>` +
-				`<blockquote>${decrypted}</blockquote>\n\n`+
-				`<b>Новое:</b> `+
+				`<blockquote>${decrypted}</blockquote>\n\n` +
+				`<b>Новое:</b> ` +
 				`<blockquote>${msg.text}</blockquote>\n`,
 			{
 				parse_mode: 'HTML',
@@ -165,9 +166,9 @@ bot.on('deleted_business_messages', async ctx => {
 			`❌ <b>@${original.senderName} удалил(а) сообщение: </b>\n\n` +
 				`<b>Оригинал:</b>` +
 				`<blockquote>${decryptText(original.content, {
-						id: original.tgId,
-						createdAt: original.createdAt,
-					}).trim()}
+					id: original.tgId,
+					createdAt: original.createdAt,
+				}).trim()}
 				</blockquote>`,
 			{
 				parse_mode: 'HTML',
@@ -190,9 +191,12 @@ bot.catch(err => {
 export async function startBot() {
 	console.log('🚀 Starting bot...')
 
+	let res
+
 	await bot.init()
 	if (WEBHOOK) {
-		await bot.api.setWebhook(WEBHOOK.toString())
+		res = await bot.api.setWebhook(WEBHOOK.toString())
+		console.log("📡 setWebhook response:", res)
 	} else {
 		await bot.api.deleteWebhook()
 		bot.start()
@@ -206,7 +210,7 @@ export async function startBot() {
 			` - ID: ${bot.botInfo.id}\n` +
 			` - Username: ${bot.botInfo.username}\n` +
 			` - First name: ${bot.botInfo.first_name}\n` +
-			` - Webhook: ${WEBHOOK}\n`
+			` - Webhook: ${res ? 'Enabled' : 'Disabled'}\n`
 	)
 
 	return
