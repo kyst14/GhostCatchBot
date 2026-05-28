@@ -62,6 +62,14 @@ bot.on('business_connection', async ctx => {
 		)
 	} else {
 		// Disconnect
+		await prisma.user.update({
+			where: {
+				id: conn.user.id,
+			},
+			data: {
+				connId: "",
+			},
+		})
 	}
 })
 

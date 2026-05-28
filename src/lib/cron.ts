@@ -3,7 +3,7 @@ import { prisma } from './db.js';
 
 // Every day at 00:00
 cron.schedule('0 * * * *', async () => {
-    console.log("🧹 Запуск очистки старых данных...");
+    console.log("🧹 Removing old data...");
 
     const now = new Date();
 
