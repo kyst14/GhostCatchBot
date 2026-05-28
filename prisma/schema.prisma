@@ -8,9 +8,9 @@ datasource db {
 
 model User {
   id             BigInt           @id @unique
-  username       String
+  username       String                 // шифровать
 
-  connId         String           @unique
+  connId         String           @unique // шифровать
 
   chats          Chat[]           @relation("UserChats")
   messages       Message[]
@@ -30,7 +30,7 @@ model Message {
   id             Int              @id @default(autoincrement())
   tgId           BigInt
   type           MessageType
-  content        String
+  content        String             // шифровать
   createdAt      DateTime         @default(now())
 
   lastAccessedAt DateTime      @default(now())
@@ -39,7 +39,7 @@ model Message {
   // Foreign keys
   chatId         BigInt
   ownId          BigInt
-  senderName     String
+  senderName     String             // шифровать
 
   // Relations
   chat           Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)

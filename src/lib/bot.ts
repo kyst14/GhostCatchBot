@@ -102,7 +102,10 @@ bot.on('business_message:text').filter(
 					createdAt: createdAt,
 				}),
 				createdAt: createdAt,
-				senderName: msg.from.username || msg.from.first_name,
+				senderName: encryptText(msg.from.username || msg.from.first_name, {
+					id: msg.message_id,
+					createdAt: createdAt,
+				}),
 				chat: {
 					connect: {
 						id: msg.chat.id,
@@ -136,10 +139,16 @@ bot.on('edited_business_message', async ctx => {
 	})
 	if (!decrypted) return
 
+	const senderName = decryptText(original.senderName, {
+		id: original.tgId,
+		createdAt: original.createdAt,
+	})
+	if (!senderName) return
+
 	if (original) {
 		await bot.api.sendMessage(
 			original.ownId.toString(),
-			`📝 <b>@${original.senderName} изменил(а) сообщение: </b>\n\n` +
+			`📝 <b>@${senderName} изменил(а) сообщение: </b>\n\n` +
 				`<b>Старое:</b>` +
 				`<blockquote>${decrypted}</blockquote>\n\n` +
 				`<b>Новое:</b> ` +
@@ -177,9 +186,15 @@ bot.on('deleted_business_messages', async ctx => {
 		})
 		if (!original) return
 
+		const senderName = decryptText(original.senderName, {
+			id: original.tgId,
+			createdAt: original.createdAt,
+		})
+		if (!senderName) return
+
 		await bot.api.sendMessage(
 			original.ownId.toString(),
-			`❌ <b>@${original.senderName} удалил(а) сообщение: </b>\n\n` +
+			`❌ <b>@${senderName} удалил(а) сообщение: </b>\n\n` +
 				`<b>Оригинал:</b>` +
 				`<blockquote>${decryptText(original.content, {
 					id: original.tgId,
