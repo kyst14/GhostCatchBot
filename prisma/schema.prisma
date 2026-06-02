@@ -7,43 +7,53 @@ datasource db {
 }
 
 model User {
-  id             BigInt           @id @unique
-  username       String
+  id                   BigInt           @id @unique
+  username             String
 
-  connId         String           @unique
+  connId               String           @unique
 
-  chats          Chat[]           @relation("UserChats")
-  messages       Message[]
+  // Statistics
+  messagesDeleted      Int              @default(0)
+  messagesEdited       Int              @default(0)
+  messagesProtected    Int              @default(0)
+
+  chats                Chat[]           @relation("UserChats")
+  messages             Message[]
 }
 
 model Chat {
-  id             BigInt           @id
+  id                   BigInt           @id
 
-  lastAccessedAt DateTime @default(now())
-  expiresAt      DateTime
+  // Statistics
+  messagesDeleted      Int              @default(0)
+  messagesEdited       Int              @default(0)
+  messagesProtected    Int              @default(0)
 
-  users          User[]           @relation("UserChats")
-  messages       Message[]
+  lastAccessedAt       DateTime         @default(now())
+  expiresAt            DateTime
+
+  users                User[]           @relation("UserChats")
+  messages             Message[]
 }
 
 model Message {
-  id             Int              @id @default(autoincrement())
-  tgId           BigInt
-  type           MessageType
-  content        String
-  createdAt      DateTime         @default(now())
+  id                   Int              @id @default(autoincrement())
+  tgId                 BigInt
+  type                 MessageType
+  content              String
+  createdAt            DateTime         @default(now())
 
-  lastAccessedAt DateTime         @default(now())
-  expiresAt      DateTime
+  lastAccessedAt       DateTime         @default(now())
+  expiresAt            DateTime
 
   // Foreign keys
-  chatId         BigInt
-  ownId          BigInt
-  senderName     String
+  chatId               BigInt
+  ownId                BigInt
+  senderName           String
 
   // Relations
-  chat           Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  own            User             @relation(fields: [ownId], references: [id])
+  chat                 Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  own                  User             @relation(fields: [ownId], references: [id])
 }
 
 enum MessageType {

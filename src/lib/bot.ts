@@ -21,42 +21,126 @@ if (!BOT_TOKEN) {
 	throw new Error('ADMIN_ID is not defined')
 }
 
-interface MyContext extends Context {
-	state: {
-		conn: BusinessConnection | undefined
-	}
-}
-
-const bot = new Bot<MyContext>(BOT_TOKEN)
+const bot = new Bot(BOT_TOKEN)
 
 bot.command('start', async ctx => {
-	return await ctx.reply(
-		'👋 Hello, I am <b>Ghost Catcher</b>! Connect me to a Business account and I will work!',
-		{ parse_mode: 'HTML' }
+	const chatId = ctx.match
+
+	if (chatId && ctx.message) {
+		const user = await prisma.user.findUnique({
+			where: {
+				id: ctx.message?.from.id,
+			},
+		})
+
+		if (user) {
+			const chat = await prisma.chat.findUnique({
+				where: {
+					id: Number(chatId.replace('bizChat', '')),
+				},
+			})
+
+			if (!chat) {
+				return await ctx.reply(
+					`🚫 Chat not found.`
+				)
+			}
+
+			const msg = await prisma.message.findFirst({
+				where: {
+					chatId: chat.id,
+				},
+				orderBy: {
+					createdAt: 'desc', // Get the latest message in the chat to extract sender name
+				},
+				select: {
+					senderName: true,
+				}
+			})
+
+			const username = decryptText(msg?.senderName || '') || 'Unknown'
+
+			return await ctx.reply(
+				`Chat with @${username}.\n\n` +
+					`Statistics for this chat:\n` +
+					`- Deleted messages: ${chat.messagesDeleted}\n` +
+					`- Edited messages: ${chat.messagesEdited}\n` +
+					`- Protected messages: ${chat.messagesProtected}\n\n`
+			)
+		} else {
+			return await ctx.reply(
+				`🚫 Chat not found.`
+			)
+		}
+	}
+
+	await ctx.reply(
+		`👋 Hello! I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
+			`To get started, please use /connect command to see available commands and features.`
+	)
+
+	await ctx.reply(
+		`Using this bot you agree to our <b>Privacy Policy</b>. You can read it here:`,
+		{
+			parse_mode: 'HTML',
+			reply_markup: {
+				inline_keyboard: [
+					[
+						{
+							text: 'Privacy Policy',
+							url: 'https://telegra.ph/Privacy-Policy-for-Ghost-Catch-Bot-06-02',
+						},
+					],
+				],
+			},
+		}
 	)
 })
 
-bot.use(async (ctx, next) => {
-	const conn =
-		(await ctx.getBusinessConnection().catch(() => undefined)) ||
-		ctx.update?.business_connection ||
-		undefined
-	const msg = ctx.businessMessage
-
-	// Connect user and chat
-	await connectUser(conn)
-	await connectChat(ctx)
-
-	if (msg) {
-		// Touch message
-		await touchChat(msg.chat.id)
-		await touchMessage(msg.message_id)
-	}
-
-	ctx.state.conn = conn
-
-	return await next()
+bot.command('help', async ctx => {
+	return await ctx.reply(
+		`I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
+			`Here are the available commands:\n` +
+			`- /start: Get started with the bot\n` +
+			`- /help: Show this help message\n` +
+			`- /connect: Help connect the bot to your Business account\n` +
+			`- /feedback: Provide feedback about the bot\n` +
+			`- /stats: Show your message statistics\n\n` +
+			`Features:\n` +
+			`- View deleted messages in Business chats\n` +
+			`- View edited messages in Business chats\n` +
+			`- Save ephemeral media in private chats (reply to a protected message with media to save it)`
+	)
 })
+
+bot.use().filter(
+	async ctx => {
+		return (
+			!!ctx.businessConnection ||
+			!!ctx.businessMessage ||
+			!!ctx.update?.business_connection
+		)
+	},
+	async (ctx, next) => {
+		const conn =
+			(await ctx.getBusinessConnection().catch(() => undefined)) ||
+			ctx.update?.business_connection ||
+			undefined
+		const msg = ctx.businessMessage
+
+		// Connect user and chat
+		await connectUser(conn)
+		await connectChat(ctx)
+
+		if (msg) {
+			// Touch message
+			await touchChat(msg.chat.id)
+			await touchMessage(msg.message_id)
+		}
+
+		return await next()
+	}
+)
 
 // Ловим подключение бота к Business аккаунту
 bot.on('business_connection', async ctx => {
@@ -189,6 +273,8 @@ bot.on('business_message').filter(
 				caption: captionText ?? '',
 			})
 		}
+
+		incrementProtected(ownId, msg.chat.id)
 	}
 )
 
@@ -233,6 +319,8 @@ bot.on('edited_business_message:text', async ctx => {
 			},
 		})
 	}
+
+	incrementEdited(original.ownId, msg.chat.id)
 
 	return
 })
@@ -300,6 +388,8 @@ bot.on('deleted_business_messages', async ctx => {
 				continue
 			}
 		}
+
+		incrementDeleted(original.ownId, original.chatId)
 
 		await prisma.message.delete({
 			where: {
@@ -388,7 +478,7 @@ async function connectUser(conn: BusinessConnection | undefined) {
 	})
 }
 
-async function connectChat(ctx: MyContext) {
+async function connectChat(ctx: Context) {
 	if (!ctx.businessMessage) return
 	return await prisma.chat.upsert({
 		where: {
@@ -403,7 +493,7 @@ async function connectChat(ctx: MyContext) {
 	})
 }
 
-async function isOwn(ctx: MyContext): Promise<boolean> {
+async function isOwn(ctx: Context): Promise<boolean> {
 	const conn = await ctx.getBusinessConnection()
 	const user = conn.user
 
@@ -481,7 +571,8 @@ async function getFileBuffer(fileId: string): Promise<Buffer> {
 		}
 
 		const contentLength = response.headers.get('content-length')
-		if (contentLength && Number(contentLength) > 20 * 1024 * 1024) { // 20MB
+		if (contentLength && Number(contentLength) > 20 * 1024 * 1024) {
+			// 20MB
 			throw new Error('File too large (>20MB)')
 		}
 
@@ -509,4 +600,83 @@ async function getFileBuffer(fileId: string): Promise<Buffer> {
 	} finally {
 		clearTimeout(timeout)
 	}
+}
+
+// Statistics
+async function incrementDeleted(userId: number | bigint, chatId: number | bigint) {
+	await prisma.user.update({
+		where: {
+			id: userId,
+		},
+		data: {
+			messagesDeleted: {
+				increment: 1,
+			},
+		},
+	})
+
+	await prisma.chat.update({
+		where: {
+			id: chatId,
+		},
+		data: {
+			messagesDeleted: {
+				increment: 1,
+			},
+		}
+	})
+
+	return
+}
+
+async function incrementEdited(userId: number | bigint, chatId: number | bigint) {
+	await prisma.user.update({
+		where: {
+			id: userId,
+		},
+		data: {
+			messagesEdited: {
+				increment: 1,
+			},
+		},
+	})
+
+	await prisma.chat.update({
+		where: {
+			id: chatId,
+		},
+		data: {
+			messagesEdited: {
+				increment: 1,
+			},
+		}
+	})
+
+	return
+}
+
+async function incrementProtected(userId: number | bigint, chatId: number | bigint) {
+	await prisma.user.update({
+		where: {
+			id: userId,
+		},
+		data: {
+			messagesProtected: {
+				increment: 1,
+			},
+		},
+	})
+
+	await prisma.chat.update({
+		where: {
+			id: chatId,
+		},
+		data: {
+			messagesProtected: {
+				increment: 1,
+			},
+		}
+	})
+
+	return
 }

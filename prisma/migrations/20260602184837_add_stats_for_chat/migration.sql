@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Chat" ADD COLUMN     "messagesDeleted" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "messagesEdited" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "messagesProtected" INTEGER NOT NULL DEFAULT 0;
