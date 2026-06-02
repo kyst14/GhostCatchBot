@@ -77,7 +77,7 @@ bot.on('business_connection', async ctx => {
 // Новое сообщение в Business чате
 bot.on('business_message').filter(
 	async ctx => {
-		return true // !(await isOwn(ctx))
+		return !(await isOwn(ctx))
 	},
 	async ctx => {
 		const msg = ctx.businessMessage!
