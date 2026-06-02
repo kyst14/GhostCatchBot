@@ -9,7 +9,7 @@ const isDev = process.env.NODE_ENV !== 'production'
 
 // Bot config
 const BOT_TOKEN = process.env.BOT_TOKEN
-const ADMIN_ID = process.env.ADMIN_ID
+const ADMIN_ID = process.env.ADMIN_ID!
 export const WEBHOOK: URL | null =
 	!isDev && process.env.WEBHOOK_SECRET && process.env.BASE_URL
 		? new URL(process.env.WEBHOOK_SECRET, process.env.BASE_URL)
@@ -21,7 +21,13 @@ if (!BOT_TOKEN) {
 	throw new Error('ADMIN_ID is not defined')
 }
 
-const bot = new Bot(BOT_TOKEN)
+interface MyContext extends Context {
+	state: {
+		conn: BusinessConnection | undefined
+	}
+}
+
+const bot = new Bot<MyContext>(BOT_TOKEN)
 
 bot.command('start', async ctx => {
 	return await ctx.reply(
@@ -31,15 +37,23 @@ bot.command('start', async ctx => {
 })
 
 bot.use(async (ctx, next) => {
-	const conn = ctx.businessConnection
+	const conn =
+		(await ctx.getBusinessConnection().catch(() => undefined)) ||
+		ctx.update?.business_connection ||
+		undefined
 	const msg = ctx.businessMessage
+
+	// Connect user and chat
 	await connectUser(conn)
 	await connectChat(ctx)
 
 	if (msg) {
+		// Touch message
 		await touchChat(msg.chat.id)
 		await touchMessage(msg.message_id)
 	}
+
+	ctx.state.conn = conn
 
 	return await next()
 })
@@ -97,7 +111,14 @@ bot.on('business_message').filter(
 		} else if (type === 'PHOTO' || type === 'VIDEO') {
 			const file = msg.photo?.at(-1) || msg.video // Get the highest resolution photo
 			if (!file) return
-			const buffer = await getFileBuffer(file.file_id)
+			const buffer = await getFileBuffer(file.file_id).catch(() => {
+				ctx.api.sendMessage(
+					ownId.toString(),
+					`⚠️ Failed to fetch the file. It might be too large or unavailable.`
+				)
+				return null
+			})
+			if (!buffer) return
 
 			const encrypted =
 				encryptBuffer(buffer).toString('base64') +
@@ -155,7 +176,14 @@ bot.on('business_message').filter(
 		if (type === 'PHOTO' || type === 'VIDEO') {
 			const file = msg.photo?.at(-1) || msg.video // Get the highest resolution photo
 			if (!file) return
-			const buffer = await getFileBuffer(file.file_id)
+			const buffer = await getFileBuffer(file.file_id).catch(() => {
+				ctx.api.sendMessage(
+					ownId.toString(),
+					`⚠️ Failed to fetch the file. It might be too large or unavailable.`
+				)
+				return null
+			})
+			if (!buffer) return
 
 			await ctx.api.sendPhoto(ownId.toString(), new InputFile(buffer), {
 				caption: captionText ?? '',
@@ -171,6 +199,7 @@ bot.on('edited_business_message:text', async ctx => {
 	const original = await prisma.message.findFirst({
 		where: {
 			tgId: msg.message_id,
+			chatId: msg.chat.id,
 		},
 	})
 	if (!original) return
@@ -282,13 +311,22 @@ bot.on('deleted_business_messages', async ctx => {
 	return
 })
 
-bot.catch(err => {
+function onError(err: Error) {
 	if (isDev) {
-		console.error('❌ Error:', err)
+		console.error('❌ Uncaught Exception:', err)
 		process.exit(1)
 	} else {
-		bot.api.sendMessage(ADMIN_ID, `❌ Error: ${err.message}`)
+		bot.api.sendMessage(ADMIN_ID, `❌ Uncaught Exception: ${err.message}`)
 	}
+}
+
+bot.catch(onError)
+process.on('unhandledRejection', onError)
+process.on('uncaughtException', onError)
+
+process.on('SIGTERM', () => {
+	bot.stop()
+	process.exit(0)
 })
 
 export async function startBot() {
@@ -350,7 +388,7 @@ async function connectUser(conn: BusinessConnection | undefined) {
 	})
 }
 
-async function connectChat(ctx: Context) {
+async function connectChat(ctx: MyContext) {
 	if (!ctx.businessMessage) return
 	return await prisma.chat.upsert({
 		where: {
@@ -365,7 +403,7 @@ async function connectChat(ctx: Context) {
 	})
 }
 
-async function isOwn(ctx: Context): Promise<boolean> {
+async function isOwn(ctx: MyContext): Promise<boolean> {
 	const conn = await ctx.getBusinessConnection()
 	const user = conn.user
 
@@ -428,7 +466,47 @@ async function getFileBuffer(fileId: string): Promise<Buffer> {
 
 	const url = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`
 
-	const response = await fetch(url)
+	const controller = new AbortController()
+	const timeout = setTimeout(() => controller.abort(), 15_000) // 15 seconds
 
-	return Buffer.from(await response.arrayBuffer())
+	try {
+		const response = await fetch(url, {
+			signal: controller.signal,
+		})
+
+		if (!response.ok) {
+			throw new Error(
+				`Failed to fetch file: ${response.status} ${response.statusText}`
+			)
+		}
+
+		const contentLength = response.headers.get('content-length')
+		if (contentLength && Number(contentLength) > 20 * 1024 * 1024) { // 20MB
+			throw new Error('File too large (>20MB)')
+		}
+
+		const chunks: Buffer[] = []
+		let total = 0
+		const MAX = 25 * 1024 * 1024 // 25MB to be safe
+
+		const reader = response.body?.getReader()
+		if (!reader) throw new Error('No response body')
+
+		while (true) {
+			const { done, value } = await reader.read()
+			if (done) break
+
+			if (value) {
+				total += value.length
+				if (total > MAX) {
+					throw new Error('Stream exceeded size limit')
+				}
+				chunks.push(Buffer.from(value))
+			}
+		}
+
+		return Buffer.concat(chunks)
+	} finally {
+		clearTimeout(timeout)
+	}
 }
