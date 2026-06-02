@@ -8,9 +8,9 @@ datasource db {
 
 model User {
   id             BigInt           @id @unique
-  username       String                 // шифровать
+  username       String
 
-  connId         String           @unique // шифровать
+  connId         String           @unique
 
   chats          Chat[]           @relation("UserChats")
   messages       Message[]
@@ -30,16 +30,16 @@ model Message {
   id             Int              @id @default(autoincrement())
   tgId           BigInt
   type           MessageType
-  content        String             // шифровать
+  content        String
   createdAt      DateTime         @default(now())
 
-  lastAccessedAt DateTime      @default(now())
+  lastAccessedAt DateTime         @default(now())
   expiresAt      DateTime
 
   // Foreign keys
   chatId         BigInt
   ownId          BigInt
-  senderName     String             // шифровать
+  senderName     String
 
   // Relations
   chat           Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
@@ -48,5 +48,7 @@ model Message {
 
 enum MessageType {
   TEXT
-  MEDIA
+  PHOTO
+  VIDEO
+  STICKER
 }

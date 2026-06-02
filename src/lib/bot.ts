@@ -1,8 +1,9 @@
 import prisma from '@/lib/db.js'
 import 'dotenv/config'
-import { Bot, Context } from 'grammy'
-import type { BusinessConnection } from 'grammy/types'
-import { decryptText, encryptText } from './encryption.js'
+import { Bot, Context, InputFile } from 'grammy'
+import type { BusinessConnection, Message, ParseMode } from 'grammy/types'
+import { escape } from 'html-escaper'
+import { decryptBuffer, decryptText, encryptBuffer, encryptText } from './encryption.js'
 
 const isDev = process.env.NODE_ENV !== 'production'
 
@@ -24,7 +25,7 @@ const bot = new Bot(BOT_TOKEN)
 
 bot.command('start', async ctx => {
 	return await ctx.reply(
-		'👋 Привет, я <b>Ghost Catcher</b>! Подключи меня к Business аккаунту и я заработаю!',
+		'👋 Hello, I am <b>Ghost Catcher</b>! Connect me to a Business account and I will work!',
 		{ parse_mode: 'HTML' }
 	)
 })
@@ -51,13 +52,13 @@ bot.on('business_connection', async ctx => {
 	if (conn.is_enabled) {
 		return await ctx.api.sendMessage(
 			ctx.businessConnection.user.id,
-			`👋 Привет, ${conn.user.first_name}!\n` +
-				`Вы подключились к Business аккаунту.\n` +
-				`Теперь вы можете:` +
+			`👋 Hello, ${conn.user.first_name}!\n` +
+				`You have connected to a Business account.\n` +
+				`Now you can:` +
 				`\n\n` +
-				`- Просматривать и удалять сообщения в Business чатах` +
+				`- View and delete messages in Business chats` +
 				`\n` +
-				`- Сохранять одноразовое медиа в личном чате`,
+				`- Save ephemeral media in private chats`,
 			{ parse_mode: 'HTML' }
 		)
 	} else {
@@ -67,54 +68,65 @@ bot.on('business_connection', async ctx => {
 				id: conn.user.id,
 			},
 			data: {
-				connId: "",
+				connId: '',
 			},
 		})
 	}
 })
 
 // Новое сообщение в Business чате
-bot.on('business_message:text').filter(
+bot.on('business_message').filter(
 	async ctx => {
-		return !(await isOwn(ctx))
+		return true // !(await isOwn(ctx))
 	},
 	async ctx => {
 		const msg = ctx.businessMessage!
 
-		const { id: ownId } = (await prisma.user.findFirst({
-			where: {
-				connId: ctx.businessConnectionId!,
-			},
-			select: {
-				id: true,
-			},
-		}))!
+		const ownId = await ctx.getBusinessConnection().then(conn => conn.user.id)
 
 		const createdAt = new Date(msg.date * 1000)
 
-		// Save new message
+		const type = getMessageType(msg)
+
+		if (type === 'UNKNOWN') return
+
+		let content = ''
+
+		if (type === 'TEXT') {
+			content = encryptText(msg.text!)
+		} else if (type === 'PHOTO' || type === 'VIDEO') {
+			const file = msg.photo?.at(-1) || msg.video // Get the highest resolution photo
+			if (!file) return
+			const buffer = await getFileBuffer(file.file_id)
+
+			const encrypted =
+				encryptBuffer(buffer).toString('base64') +
+				'/&/' +
+				encryptText(msg.text ?? '')
+
+			content = encrypted
+		}
+
+		// Save messages to DB
 		await prisma.message.create({
 			data: {
 				tgId: msg.message_id,
-				type: 'TEXT',
-				content: encryptText(msg.text || '', {
-					id: msg.message_id,
-					createdAt: createdAt,
-				}),
-				createdAt: createdAt,
-				senderName: encryptText(msg.from.username || msg.from.first_name, {
-					id: msg.message_id,
-					createdAt: createdAt,
-				}),
+				type,
+				content,
+				senderName: encryptText(msg.from.username || msg.from.first_name),
+				createdAt,
+				expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days
+
 				chat: {
 					connect: {
 						id: msg.chat.id,
 					},
 				},
 				own: {
-					connect: { id: ownId },
+					connect: {
+						id: ownId,
+					},
 				},
-				expiresAt: new Date(msg.date * 1000 + 24 * 60 * 60 * 1000),
 			},
 		})
 
@@ -123,7 +135,7 @@ bot.on('business_message:text').filter(
 )
 
 // Message edited
-bot.on('edited_business_message', async ctx => {
+bot.on('edited_business_message:text', async ctx => {
 	const msg = ctx.editedBusinessMessage!
 
 	const original = await prisma.message.findFirst({
@@ -133,26 +145,21 @@ bot.on('edited_business_message', async ctx => {
 	})
 	if (!original) return
 
-	const decrypted = decryptText(original.content, {
-		id: original.tgId,
-		createdAt: original.createdAt,
-	})
+	const decrypted = decryptText(original.content)
 	if (!decrypted) return
 
-	const senderName = decryptText(original.senderName, {
-		id: original.tgId,
-		createdAt: original.createdAt,
-	})
+	const senderName = decryptText(original.senderName)
 	if (!senderName) return
 
 	if (original) {
 		await bot.api.sendMessage(
 			original.ownId.toString(),
-			`📝 <b>@${senderName} изменил(а) сообщение: </b>\n\n` +
-				`<b>Старое:</b>` +
-				`<blockquote>${decrypted}</blockquote>\n\n` +
-				`<b>Новое:</b> ` +
-				`<blockquote>${msg.text}</blockquote>\n`,
+			`📝 <b>@${senderName} edited message: </b>\n\n` +
+				`<b>Original:</b>` +
+				`<blockquote>${escape(decrypted)}</blockquote>\n\n` +
+				`<b>New:</b> ` +
+				`<blockquote>${escape(msg.text ?? '')}</blockquote>\n` +
+				`Timestamp: ${original.createdAt.toLocaleString()}`,
 			{
 				parse_mode: 'HTML',
 			}
@@ -163,10 +170,7 @@ bot.on('edited_business_message', async ctx => {
 				id: original.id,
 			},
 			data: {
-				content: encryptText(msg.text!, {
-					id: msg.message_id,
-					createdAt: new Date(msg.date * 1000),
-				}),
+				content: encryptText(msg.text!),
 			},
 		})
 	}
@@ -184,27 +188,65 @@ bot.on('deleted_business_messages', async ctx => {
 				tgId: msgId,
 			},
 		})
-		if (!original) return
+		if (!original) continue
 
-		const senderName = decryptText(original.senderName, {
-			id: original.tgId,
-			createdAt: original.createdAt,
-		})
-		if (!senderName) return
+		const senderName = decryptText(original.senderName)
+		if (!senderName) continue
 
-		await bot.api.sendMessage(
-			original.ownId.toString(),
-			`❌ <b>@${senderName} удалил(а) сообщение: </b>\n\n` +
-				`<b>Оригинал:</b>` +
-				`<blockquote>${decryptText(original.content, {
-					id: original.tgId,
-					createdAt: original.createdAt,
-				}).trim()}
-				</blockquote>`,
-			{
-				parse_mode: 'HTML',
+		if (original.type === 'TEXT') {
+			const content = decryptText(original.content)
+			await bot.api.sendMessage(
+				original.ownId.toString(),
+				`❌ <b>@${senderName} deleted message: </b>\n\n` +
+					`<b>Original:</b>` +
+					`<blockquote>` +
+					`${escape(content)}` +
+					`</blockquote>\n\n` +
+					`Timestamp: ${original.createdAt.toLocaleString()}`,
+				{
+					parse_mode: 'HTML',
+				}
+			)
+		} else if (original.type === 'PHOTO' || original.type === 'VIDEO') {
+			const encoded = original.content.split('/&/')
+			if (encoded.length !== 2) continue
+
+			const content = decryptBuffer(Buffer.from(encoded[0]!, 'base64'))
+			const captionText = decryptText(encoded[1]!)
+
+			if (!content) continue
+			const options = {
+						caption:
+							`❌ <b>@${senderName} deleted a ${original.type.toLowerCase()}</b>\n\n` +
+							(captionText
+								? `<b>Caption:</b>\n<blockquote>${escape(captionText)}</blockquote>\n\n`
+								: '') +
+							`Timestamp: ${original.createdAt.toLocaleString()}`,
+						parse_mode: 'HTML' as ParseMode,
+					}
+
+			if (original.type === 'PHOTO') {
+				await bot.api.sendPhoto(
+					original.ownId.toString(),
+					new InputFile(content),
+					options
+				)
+			} else if (original.type === 'VIDEO') {
+				await bot.api.sendVideo(
+					original.ownId.toString(),
+					new InputFile(content),
+					options
+				)
+			} else {
+				continue
 			}
-		)
+		}
+
+		await prisma.message.delete({
+			where: {
+				id: original.id,
+			},
+		})
 	}
 
 	return
@@ -212,10 +254,10 @@ bot.on('deleted_business_messages', async ctx => {
 
 bot.catch(err => {
 	if (isDev) {
-		console.error('❌ Ошибка:', err)
+		console.error('❌ Error:', err)
 		process.exit(1)
 	} else {
-		bot.api.sendMessage(ADMIN_ID, `❌ Ошибка: ${err.message}`)
+		bot.api.sendMessage(ADMIN_ID, `❌ Error: ${err.message}`)
 	}
 })
 
@@ -307,7 +349,7 @@ async function touchMessage(id: string | number) {
 
 	await prisma.message.updateMany({
 		where: {
-			id: Number(id),
+			tgId: Number(id),
 		},
 		data: {
 			lastAccessedAt: new Date(),
@@ -328,4 +370,35 @@ async function touchChat(id: string | number) {
 			expiresAt,
 		},
 	})
+}
+
+function getMessageType(msg: Message) {
+	if (msg.text) return 'TEXT'
+	if (msg.photo) return 'PHOTO'
+	if (msg.video) return 'VIDEO'
+	// if (msg.animation) return 'GIF'
+	// if (msg.document) return 'DOCUMENT'
+	// if (msg.audio) return 'AUDIO'
+	// if (msg.voice) return 'VOICE'
+	// if (msg.video_note) return 'VIDEO_NOTE'
+	// if (msg.sticker) return 'STICKER'
+	// if (msg.location) return 'LOCATION'
+	// if (msg.contact) return 'CONTACT'
+	// if (msg.poll) return 'POLL'
+
+	return 'UNKNOWN'
+}
+
+async function getFileBuffer(fileId: string): Promise<Buffer> {
+	const file = await bot.api.getFile(fileId)
+
+	if (!file.file_path) {
+		throw new Error('No file path')
+	}
+
+	const url = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`
+
+	const response = await fetch(url)
+
+	return Buffer.from(await response.arrayBuffer())
 }
