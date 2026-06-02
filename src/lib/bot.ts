@@ -134,6 +134,36 @@ bot.on('business_message').filter(
 	}
 )
 
+// Save one-time media
+bot.on('business_message').filter(
+	async ctx => {
+		return (
+			(await isOwn(ctx)) &&
+			!!ctx.businessMessage.reply_to_message &&
+			ctx.businessMessage.reply_to_message.has_protected_content === true
+		)
+	},
+	async ctx => {
+		const msg = ctx.businessMessage!.reply_to_message!
+		const captionText = msg.caption ?? msg.text
+
+		const ownId = await ctx.getBusinessConnection().then(conn => conn.user.id)
+
+		const type = getMessageType(msg)
+		if (type === 'UNKNOWN') return
+
+		if (type === 'PHOTO' || type === 'VIDEO') {
+			const file = msg.photo?.at(-1) || msg.video // Get the highest resolution photo
+			if (!file) return
+			const buffer = await getFileBuffer(file.file_id)
+
+			await ctx.api.sendPhoto(ownId.toString(), new InputFile(buffer), {
+				caption: captionText ?? '',
+			})
+		}
+	}
+)
+
 // Message edited
 bot.on('edited_business_message:text', async ctx => {
 	const msg = ctx.editedBusinessMessage!
@@ -216,14 +246,14 @@ bot.on('deleted_business_messages', async ctx => {
 
 			if (!content) continue
 			const options = {
-						caption:
-							`❌ <b>@${senderName} deleted a ${original.type.toLowerCase()}</b>\n\n` +
-							(captionText
-								? `<b>Caption:</b>\n<blockquote>${escape(captionText)}</blockquote>\n\n`
-								: '') +
-							`Timestamp: ${original.createdAt.toLocaleString()}`,
-						parse_mode: 'HTML' as ParseMode,
-					}
+				caption:
+					`❌ <b>@${senderName} deleted a ${original.type.toLowerCase()}</b>\n\n` +
+					(captionText
+						? `<b>Caption:</b>\n<blockquote>${escape(captionText)}</blockquote>\n\n`
+						: '') +
+					`Timestamp: ${original.createdAt.toLocaleString()}`,
+				parse_mode: 'HTML' as ParseMode,
+			}
 
 			if (original.type === 'PHOTO') {
 				await bot.api.sendPhoto(
