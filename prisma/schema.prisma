@@ -34,6 +34,8 @@ model Chat {
 
   users                User[]           @relation("UserChats")
   messages             Message[]
+
+  @@index([expiresAt])
 }
 
 model Message {
@@ -54,6 +56,11 @@ model Message {
   // Relations
   chat                 Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
   own                  User             @relation(fields: [ownId], references: [id])
+
+  @@index([chatId])
+  @@index([ownId])
+  @@index([tgId])
+  @@index([expiresAt])
 }
 
 enum MessageType {

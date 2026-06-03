@@ -1,6 +1,8 @@
-import { getBot, infoBot, startBot, WEBHOOK } from '@/lib/bot.js'
+import { getBot, infoBot, startBot } from '@/bot/index.js'
 import express from 'express'
 import { webhookCallback } from 'grammy'
+import { startCleanupJob } from './utils/cron.js'
+import { WEBHOOK } from './bot/lib/bot.js'
 
 const app = express()
 const bot = getBot()
@@ -41,4 +43,5 @@ app.listen(PORT, HOST, () => {
 	console.log('http://localhost:' + PORT)
 
 	startBot()
+	startCleanupJob()
 })
