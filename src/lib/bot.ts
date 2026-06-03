@@ -1,9 +1,10 @@
 import prisma from '@/lib/db.js'
+import type { MessageType } from '@prisma/client'
 import 'dotenv/config'
 import { Bot, Context, InlineKeyboard, InputFile } from 'grammy'
 import type { BusinessConnection, Message, ParseMode } from 'grammy/types'
 import { escape } from 'html-escaper'
-import { decryptBuffer, decryptText, encryptBuffer, encryptText } from './encryption.js'
+import { decryptBuffer, decryptText, encryptText } from './encryption.js'
 
 const isDev = process.env.NODE_ENV !== 'production'
 
@@ -75,7 +76,9 @@ bot.command('start', async ctx => {
 			`To get started, please use /help command to see available commands and features.`
 	)
 
-	await ctx.replyWithSticker("CAACAgQAAxkBAAEqCt5qH_ZRrr6naLpYVaVaar7KYL1umAACChAAAkKv4FIZCCMqEYiOcjsE")
+	await ctx.replyWithSticker(
+		'CAACAgQAAxkBAAEqCt5qH_ZRrr6naLpYVaVaar7KYL1umAACChAAAkKv4FIZCCMqEYiOcjsE'
+	)
 
 	await ctx.reply(
 		`Using this bot you agree to our <b>Privacy Policy</b>. You can read it here:`,
@@ -129,6 +132,35 @@ bot.command('connect', async ctx => {
 			},
 			parse_mode: 'HTML',
 		}
+	)
+})
+
+bot.command('stats', async ctx => {
+	if (!ctx.from?.id) return
+	const user = await prisma.user.findUnique({
+		where: {
+			id: ctx.from.id,
+		},
+	})
+
+	if (!user) {
+		return await ctx.reply(`🚫 User not found.`)
+	}
+
+	await ctx.reply(
+		`📊 Statistics for this chat:\n` +
+			`- Deleted messages: ${user.messagesDeleted} 🗑️\n` +
+			`- Edited messages: ${user.messagesEdited} 📝\n` +
+			`- Saved protected messages: ${user.messagesProtected} 🔒\n\n` +
+			`📋 Total: ${user.messagesDeleted + user.messagesEdited + user.messagesProtected}`
+	)
+
+	await ctx.replyWithSticker(
+		'CAACAgQAAxkBAAEqCylqH_4jB4giFAeacWBOkYGulkcMZAACFw8AAlP_iVNxK01zPrG2XzsE'
+	)
+
+	return await ctx.reply(
+		`To view statistics for a specific chat, open the chat, above click settings button and then click "Manage bot".`
 	)
 })
 
@@ -300,40 +332,28 @@ bot.on('business_message').filter(
 
 		const createdAt = new Date(msg.date * 1000)
 
-		const type = getMessageType(msg)
+		const { type, content } = extractMedia(msg) || {}
 
-		if (type === 'UNKNOWN') return
+		if (!type || !content ) {
+			return
+		}
 
-		let content = ''
+		let encrypted = ''
 
 		if (type === 'TEXT') {
-			content = encryptText(msg.text!)
-		} else if (type === 'PHOTO' || type === 'VIDEO') {
-			const file = msg.photo?.at(-1) || msg.video // Get the highest resolution photo
-			if (!file) return
-			const buffer = await getFileBuffer(file.file_id).catch(() => {
-				ctx.api.sendMessage(
-					ownId.toString(),
-					`⚠️ Failed to fetch the file. It might be too large or unavailable.`
-				)
-				return null
-			})
-			if (!buffer) return
-
-			const encrypted =
-				encryptBuffer(buffer).toString('base64') +
-				'/&/' +
-				encryptText(msg.text ?? '')
-
-			content = encrypted
+			encrypted = encryptText(content)
+		} else {
+			const fileId = encryptText(content)
+			const caption = encryptText(msg.caption || msg.text || '')
+			encrypted = JSON.stringify({ fileId, caption })
 		}
 
 		// Save messages to DB
 		await prisma.message.create({
 			data: {
 				tgId: msg.message_id,
-				type,
-				content,
+				type: type,
+				content: encrypted,
 				senderName: encryptText(msg.from.username || msg.from.first_name),
 				createdAt,
 				expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -370,18 +390,17 @@ bot.on('business_message').filter(
 
 		const ownId = await ctx.getBusinessConnection().then(conn => conn.user.id)
 
-		const type = getMessageType(msg)
-		if (type === 'UNKNOWN') return
+		const { type } = extractMedia(msg) || {}
 
 		if (type === 'PHOTO' || type === 'VIDEO') {
 			const file = msg.photo?.at(-1) || msg.video // Get the highest resolution photo
 			if (!file) return
-			const buffer = await getFileBuffer(file.file_id).catch(() => {
+			const { buffer } = await downloadTelegramFile(file.file_id).catch(() => {
 				ctx.api.sendMessage(
 					ownId.toString(),
 					`⚠️ Failed to fetch the file. It might be too large or unavailable.`
 				)
-				return null
+				return { buffer: undefined }
 			})
 			if (!buffer) return
 
@@ -420,7 +439,7 @@ bot.on('edited_business_message:text', async ctx => {
 				`<blockquote>${escape(decrypted)}</blockquote>\n\n` +
 				`<b>New:</b> ` +
 				`<blockquote>${escape(msg.text ?? '')}</blockquote>\n` +
-				`Timestamp: ${original.createdAt.toLocaleString()}`,
+				`Timestamp: ${original.createdAt.toLocaleString("ru-RU")}`,
 			{
 				parse_mode: 'HTML',
 			}
@@ -465,44 +484,31 @@ bot.on('deleted_business_messages', async ctx => {
 					`<blockquote>` +
 					`${escape(content)}` +
 					`</blockquote>\n\n` +
-					`Timestamp: ${original.createdAt.toLocaleString()}`,
+					`Timestamp: ${original.createdAt.toLocaleString("ru-RU")}`,
 				{
 					parse_mode: 'HTML',
 				}
 			)
-		} else if (original.type === 'PHOTO' || original.type === 'VIDEO') {
-			const encoded = original.content.split('/&/')
-			if (encoded.length !== 2) continue
+		} else {
+			const encoded = JSON.parse(original.content)
 
-			const content = decryptBuffer(Buffer.from(encoded[0]!, 'base64'))
-			const captionText = decryptText(encoded[1]!)
+			const fileId = decryptText(encoded.fileId || '')
+			const captionText = decryptText(encoded.caption || '')
 
-			if (!content) continue
-			const options = {
-				caption:
-					`❌ <b>@${senderName} deleted a ${original.type.toLowerCase()}</b>\n\n` +
-					(captionText
-						? `<b>Caption:</b>\n<blockquote>${escape(captionText)}</blockquote>\n\n`
-						: '') +
-					`Timestamp: ${original.createdAt.toLocaleString()}`,
-				parse_mode: 'HTML' as ParseMode,
-			}
+			if (!fileId) continue
+			
+			await bot.api.sendMessage(
+				original.ownId.toString(),
+				`❌ <b>@${senderName} deleted message: </b>\n\n` +
+				`Timestamp: ${original.createdAt.toLocaleString("ru-RU")}`,
+				{
+					parse_mode: 'HTML',
+				}
+			)
 
-			if (original.type === 'PHOTO') {
-				await bot.api.sendPhoto(
-					original.ownId.toString(),
-					new InputFile(content),
-					options
-				)
-			} else if (original.type === 'VIDEO') {
-				await bot.api.sendVideo(
-					original.ownId.toString(),
-					new InputFile(content),
-					options
-				)
-			} else {
-				continue
-			}
+			await sendByType(original.ownId.toString(), original.type, fileId, {
+				caption: captionText
+			})
 		}
 
 		incrementDeleted(original.ownId, original.chatId)
@@ -646,76 +652,153 @@ async function touchChat(id: string | number) {
 	})
 }
 
-function getMessageType(msg: Message) {
-	if (msg.text) return 'TEXT'
-	if (msg.photo) return 'PHOTO'
-	if (msg.video) return 'VIDEO'
-	// if (msg.animation) return 'GIF'
-	// if (msg.document) return 'DOCUMENT'
-	// if (msg.audio) return 'AUDIO'
-	// if (msg.voice) return 'VOICE'
-	// if (msg.video_note) return 'VIDEO_NOTE'
-	// if (msg.sticker) return 'STICKER'
-	// if (msg.location) return 'LOCATION'
-	// if (msg.contact) return 'CONTACT'
-	// if (msg.poll) return 'POLL'
-
-	return 'UNKNOWN'
-}
-
-async function getFileBuffer(fileId: string): Promise<Buffer> {
-	const file = await bot.api.getFile(fileId)
-
-	if (!file.file_path) {
-		throw new Error('No file path')
-	}
-
-	const url = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`
-
+async function downloadTelegramFile(
+	fileId: string,
+	maxSizeMB: number = 20,
+	timeoutMs: number = 15000 // 15 seconds
+) {
 	const controller = new AbortController()
-	const timeout = setTimeout(() => controller.abort(), 15_000) // 15 seconds
+	const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
 	try {
-		const response = await fetch(url, {
+		// 1. Получаем file_path
+		const file = await bot.api.getFile(fileId)
+
+		const filePath = file.file_path
+		if (!filePath) throw new Error('No file_path returned')
+
+		const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`
+
+		const size = file.file_size
+
+		if (size && size > maxSizeMB * 1024 * 1024) {
+			throw new Error('File too large')
+		}
+
+		// Download file to buffer
+		const fileRes = await fetch(fileUrl, {
 			signal: controller.signal,
 		})
 
-		if (!response.ok) {
-			throw new Error(
-				`Failed to fetch file: ${response.status} ${response.statusText}`
-			)
+		if (!fileRes.ok) throw new Error('Failed to download file')
+
+		const arrayBuffer = await fileRes.arrayBuffer()
+
+		return {
+			buffer: Buffer.from(arrayBuffer),
+			filePath,
+			size: size ? Number(size) : null,
 		}
-
-		const contentLength = response.headers.get('content-length')
-		if (contentLength && Number(contentLength) > 20 * 1024 * 1024) {
-			// 20MB
-			throw new Error('File too large (>20MB)')
-		}
-
-		const chunks: Buffer[] = []
-		let total = 0
-		const MAX = 25 * 1024 * 1024 // 25MB to be safe
-
-		const reader = response.body?.getReader()
-		if (!reader) throw new Error('No response body')
-
-		while (true) {
-			const { done, value } = await reader.read()
-			if (done) break
-
-			if (value) {
-				total += value.length
-				if (total > MAX) {
-					throw new Error('Stream exceeded size limit')
-				}
-				chunks.push(Buffer.from(value))
-			}
-		}
-
-		return Buffer.concat(chunks)
 	} finally {
 		clearTimeout(timeout)
 	}
+}
+
+interface Media<Type extends string = MessageType> {
+	type: Type
+	content: string
+}
+
+function extractMedia(msg: Message): Media | null {
+	if (msg.photo) {
+		const photo = msg.photo.at(-1)!
+		return {
+			type: 'PHOTO',
+			content: photo.file_id,
+		}
+	}
+
+	if (msg.video) {
+		return {
+			type: 'VIDEO',
+			content: msg.video.file_id,
+		}
+	}
+
+	if (msg.document) {
+		return {
+			type: 'DOCUMENT',
+			content: msg.document.file_id,
+		}
+	}
+
+	if (msg.audio) {
+		return {
+			type: 'AUDIO',
+			content: msg.audio.file_id,
+		}
+	}
+
+	if (msg.voice) {
+		return {
+			type: 'VOICE',
+			content: msg.voice.file_id,
+		}
+	}
+
+	if (msg.animation) {
+		return {
+			type: 'ANIMATION',
+			content: msg.animation.file_id,
+		}
+	}
+
+	if (msg.sticker) {
+		return {
+			type: 'STICKER',
+			content: msg.sticker.file_id,
+		}
+	}
+
+	if (msg.video_note) {
+		return {
+			type: 'VIDEO_NOTE',
+			content: msg.video_note.file_id,
+		}
+	}
+
+	if (msg.text) {
+		return {
+			type: 'TEXT',
+			content: msg.text,
+		}
+	}
+
+	return null
+}
+
+export async function sendByType(chatId: number | string, type: MessageType, payload: string, extra = {}) {
+  switch (type) {
+    case "TEXT":
+      return bot.api.sendMessage(chatId, payload, extra);
+
+    case "PHOTO":
+      return bot.api.sendPhoto(chatId, payload, extra);
+
+    case "VIDEO":
+      return bot.api.sendVideo(chatId, payload, extra);
+
+    case "DOCUMENT":
+      return bot.api.sendDocument(chatId, payload, extra);
+
+    case "AUDIO":
+      return bot.api.sendAudio(chatId, payload, extra);
+
+    case "VOICE":
+      return bot.api.sendVoice(chatId, payload, extra);
+
+    case "ANIMATION":
+      return bot.api.sendAnimation(chatId, payload, extra);
+
+    case "STICKER":
+      return bot.api.sendSticker(chatId, payload, extra);
+
+    case "VIDEO_NOTE":
+      return bot.api.sendVideoNote(chatId, payload, extra);
+
+    default:
+      throw new Error(`Unsupported type: ${type}`);
+  }
 }
 
 // Statistics

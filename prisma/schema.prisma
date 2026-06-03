@@ -60,5 +60,10 @@ enum MessageType {
   TEXT
   PHOTO
   VIDEO
+  DOCUMENT
+  AUDIO
+  VOICE
+  ANIMATION
   STICKER
+  VIDEO_NOTE
 }
