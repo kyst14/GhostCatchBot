@@ -1,4 +1,3 @@
-import prisma from '@/db/db.js'
 import 'dotenv/config'
 
 import { connectCommand } from './commands/connect.js'
@@ -16,11 +15,13 @@ import {
 } from './handlers/feedbackFlow.js'
 import bot, { ADMIN_ID, isDev, WEBHOOK } from './lib/bot.js'
 import { businessMiddleware } from './middleware/businessContext.js'
+import { aboutCommand } from './commands/about.js'
 
 bot.command('start', startCommand)
 bot.command('help', helpCommand)
 bot.command('connect', connectCommand)
 bot.command('stats', statsCommand)
+bot.command('about', aboutCommand)
 
 // Feedback
 bot.command('feedback', feedbackCommand)

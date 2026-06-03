@@ -1,7 +1,7 @@
 import type { Context } from 'grammy'
-import userService from '../services/userService.js'
 import chatService from '../services/chatService.js'
 import msgService from '../services/messageService.js'
+import userService from '../services/userService.js'
 
 export async function businessMiddleware(ctx: Context, next: () => Promise<void>) {
 	if (

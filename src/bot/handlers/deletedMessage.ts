@@ -1,8 +1,8 @@
 import prisma from '@/db/db.js'
 import { decryptText } from '@/utils/encryption.js'
 import type { Context } from 'grammy'
-import bot from '../lib/bot.js'
 import { escape } from 'html-escaper'
+import bot from '../lib/bot.js'
 import statsService from '../services/statsService.js'
 import tgService from '../services/telegramService.js'
 

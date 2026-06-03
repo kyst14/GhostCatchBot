@@ -1,8 +1,8 @@
 import { getBot, infoBot, startBot } from '@/bot/index.js'
 import express from 'express'
 import { webhookCallback } from 'grammy'
-import { startCleanupJob } from './utils/cron.js'
 import { WEBHOOK } from './bot/lib/bot.js'
+import { startCleanupJob } from './utils/cron.js'
 
 const app = express()
 const bot = getBot()

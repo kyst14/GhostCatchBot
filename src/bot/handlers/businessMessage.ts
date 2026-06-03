@@ -1,8 +1,8 @@
 import { encryptText } from '@/utils/encryption.js'
 import { InputFile, type Context } from 'grammy'
 import msgService from '../services/messageService.js'
-import tgService from '../services/telegramService.js'
 import statsService from '../services/statsService.js'
+import tgService from '../services/telegramService.js'
 
 export async function handleBusinessMessage(ctx: Context) {
 	if (!(await msgService.isOwn(ctx))) {
