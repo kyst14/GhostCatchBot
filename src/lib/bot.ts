@@ -1,6 +1,6 @@
 import prisma from '@/lib/db.js'
 import 'dotenv/config'
-import { Bot, Context, InputFile } from 'grammy'
+import { Bot, Context, InlineKeyboard, InputFile } from 'grammy'
 import type { BusinessConnection, Message, ParseMode } from 'grammy/types'
 import { escape } from 'html-escaper'
 import { decryptBuffer, decryptText, encryptBuffer, encryptText } from './encryption.js'
@@ -9,7 +9,7 @@ const isDev = process.env.NODE_ENV !== 'production'
 
 // Bot config
 const BOT_TOKEN = process.env.BOT_TOKEN
-const ADMIN_ID = process.env.ADMIN_ID!
+const ADMIN_ID = Number(process.env.ADMIN_ID!)
 export const WEBHOOK: URL | null =
 	!isDev && process.env.WEBHOOK_SECRET && process.env.BASE_URL
 		? new URL(process.env.WEBHOOK_SECRET, process.env.BASE_URL)
@@ -41,9 +41,7 @@ bot.command('start', async ctx => {
 			})
 
 			if (!chat) {
-				return await ctx.reply(
-					`🚫 Chat not found.`
-				)
+				return await ctx.reply(`🚫 Chat not found.`)
 			}
 
 			const msg = await prisma.message.findFirst({
@@ -55,7 +53,7 @@ bot.command('start', async ctx => {
 				},
 				select: {
 					senderName: true,
-				}
+				},
 			})
 
 			const username = decryptText(msg?.senderName || '') || 'Unknown'
@@ -68,16 +66,16 @@ bot.command('start', async ctx => {
 					`- Protected messages: ${chat.messagesProtected}\n\n`
 			)
 		} else {
-			return await ctx.reply(
-				`🚫 Chat not found.`
-			)
+			return await ctx.reply(`🚫 Chat not found.`)
 		}
 	}
 
 	await ctx.reply(
 		`👋 Hello! I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
-			`To get started, please use /connect command to see available commands and features.`
+			`To get started, please use /help command to see available commands and features.`
 	)
+
+	await ctx.replyWithSticker("CAACAgQAAxkBAAEqCt5qH_ZRrr6naLpYVaVaar7KYL1umAACChAAAkKv4FIZCCMqEYiOcjsE")
 
 	await ctx.reply(
 		`Using this bot you agree to our <b>Privacy Policy</b>. You can read it here:`,
@@ -113,6 +111,120 @@ bot.command('help', async ctx => {
 	)
 })
 
+bot.command('connect', async ctx => {
+	return await ctx.reply(
+		`❓ Connect the bot to your Business account:\n\n
+			1. Click "🔌 Connect" button
+			2. Choose "Chat automation" and write in the input field: @${ctx.me?.username}`,
+		{
+			reply_markup: {
+				inline_keyboard: [
+					[
+						{
+							text: '🔌 Connect',
+							url: `tg://settings/edit/`,
+						},
+					],
+				],
+			},
+			parse_mode: 'HTML',
+		}
+	)
+})
+
+bot.command('feedback', async ctx => {
+	return await ctx.reply(
+		`📨 Write your feedback here replying to this message. It will be sent to the admin.`,
+		{
+			reply_markup: {
+				force_reply: true,
+				input_field_placeholder: 'Write your feedback...',
+			},
+		}
+	)
+})
+
+bot.callbackQuery(/^reply_to:(\d+)$/, async ctx => {
+	const userId = ctx.match[1]
+
+	await ctx.answerCallbackQuery()
+	await ctx.reply(
+		`📨 Write your answer (ID: ${userId}). It will be sent to the user.`,
+		{
+			reply_markup: {
+				force_reply: true,
+				input_field_placeholder: 'Write your answer...',
+			},
+		}
+	)
+})
+
+bot.on('message', async (ctx, next) => {
+	const replyTo = ctx.message.reply_to_message
+
+	if (!replyTo) return await next()
+
+	const replyText = replyTo.text || ''
+
+	// --- ADMIN ---
+	if (ctx.from.id === ADMIN_ID) {
+		const match = replyText.match(/ID:\s*(\d+)/)
+
+		if (match) {
+			const userId = match[1] || ''
+
+			try {
+				await ctx.api.sendMessage(userId, `📨 <b>Message from admin:</b>`, {
+					parse_mode: 'HTML',
+				})
+				await ctx.api.copyMessage(
+					userId,
+					ctx.message.chat.id,
+					ctx.message.message_id
+				)
+				return await ctx.reply('✅ Reply sended successfully to the user!')
+			} catch (err) {
+				return await ctx.reply(
+					'❌ Failed to send reply to the user. Probably the user has blocked the bot.'
+				)
+			}
+		}
+	}
+
+	// --- USER FEEDBACK ---
+	const isOfficialFeedbackRequest = replyText.includes(
+		'Write your feedback here replying to this message'
+	)
+
+	if (isOfficialFeedbackRequest) {
+		try {
+			const keyboard = new InlineKeyboard().text(
+				'✏️ Reply',
+				`reply_to:${ctx.from.id}`
+			)
+
+			await ctx.api.sendMessage(
+				ADMIN_ID,
+				`📨 <b>Message from @${ctx.from.username || ctx.from.first_name}:</b>`,
+				{ parse_mode: 'HTML' }
+			)
+
+			await ctx.api.copyMessage(
+				ADMIN_ID,
+				ctx.message.chat.id,
+				ctx.message.message_id,
+				{ reply_markup: keyboard }
+			)
+
+			ctx.react('❤')
+
+			return await ctx.reply('👍 Thank you! Your message was sended to admin!')
+		} catch (err) {
+			return await ctx.reply('❌ Failed to send message to the admin.')
+		}
+	}
+})
+
 bot.use().filter(
 	async ctx => {
 		return (
@@ -142,13 +254,13 @@ bot.use().filter(
 	}
 )
 
-// Ловим подключение бота к Business аккаунту
+// Catch Business connection
 bot.on('business_connection', async ctx => {
 	const conn = ctx.businessConnection
 
 	// Send welcome message
 	if (conn.is_enabled) {
-		return await ctx.api.sendMessage(
+		await ctx.api.sendMessage(
 			ctx.businessConnection.user.id,
 			`👋 Hello, ${conn.user.first_name}!\n` +
 				`You have connected to a Business account.\n` +
@@ -158,6 +270,10 @@ bot.on('business_connection', async ctx => {
 				`\n` +
 				`- Save ephemeral media in private chats`,
 			{ parse_mode: 'HTML' }
+		)
+		return await ctx.api.sendSticker(
+			ctx.businessConnection.user.id,
+			'CAACAgQAAxkBAAEqCvBqH_huX7GcaLHxwJogo9VstEYS6QACexEAApr_6FEZmokItQ_wPDsE'
 		)
 	} else {
 		// Disconnect
@@ -623,7 +739,7 @@ async function incrementDeleted(userId: number | bigint, chatId: number | bigint
 			messagesDeleted: {
 				increment: 1,
 			},
-		}
+		},
 	})
 
 	return
@@ -649,7 +765,7 @@ async function incrementEdited(userId: number | bigint, chatId: number | bigint)
 			messagesEdited: {
 				increment: 1,
 			},
-		}
+		},
 	})
 
 	return
@@ -675,7 +791,7 @@ async function incrementProtected(userId: number | bigint, chatId: number | bigi
 			messagesProtected: {
 				increment: 1,
 			},
-		}
+		},
 	})
 
 	return
