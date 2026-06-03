@@ -3,6 +3,8 @@ import { decryptText } from '@/utils/encryption.js'
 import type { Context } from 'grammy'
 import bot from '../lib/bot.js'
 import { escape } from 'html-escaper'
+import statsService from '../services/statsService.js'
+import tgService from '../services/telegramService.js'
 
 export async function handleDeletedMessage(ctx: Context) {
 	const deleted = ctx.deletedBusinessMessages!
@@ -49,12 +51,12 @@ export async function handleDeletedMessage(ctx: Context) {
 				}
 			)
 
-			await sendByType(original.ownId.toString(), original.type, fileId, {
+			await tgService.sendByType(original.ownId.toString(), original.type, fileId, {
 				caption: captionText,
 			})
 		}
 
-		incrementDeleted(original.ownId, original.chatId)
+		statsService.incrementDeleted(original.ownId, original.chatId)
 
 		await prisma.message.delete({
 			where: {

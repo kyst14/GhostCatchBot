@@ -1,4 +1,7 @@
 import type { Context } from 'grammy'
+import userService from '../services/userService.js'
+import chatService from '../services/chatService.js'
+import msgService from '../services/messageService.js'
 
 export async function businessMiddleware(ctx: Context, next: () => Promise<void>) {
 	if (
@@ -11,12 +14,12 @@ export async function businessMiddleware(ctx: Context, next: () => Promise<void>
 
 	const conn = await ctx.getBusinessConnection().catch(() => undefined)
 
-	await connectUser(conn)
-	await connectChat(ctx)
+	await userService.connectUser(conn)
+	await chatService.connectChat(ctx)
 
 	if (ctx.businessMessage) {
-		await touchChat(ctx.businessMessage.chat.id)
-		await touchMessage(ctx.businessMessage.message_id)
+		await chatService.touchChat(ctx.businessMessage.chat.id)
+		await msgService.touchMessage(ctx.businessMessage.message_id)
 	}
 
 	return next()

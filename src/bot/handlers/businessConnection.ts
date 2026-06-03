@@ -1,3 +1,4 @@
+import prisma from '@/db/db.js'
 import type { Context } from 'grammy'
 
 export async function handleBusinessConnection(ctx: Context) {

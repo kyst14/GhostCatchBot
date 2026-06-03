@@ -3,6 +3,7 @@ import { decryptText, encryptText } from '@/utils/encryption.js'
 import type { Context } from 'grammy'
 import { escape } from 'html-escaper'
 import bot from '../lib/bot.js'
+import statsService from '../services/statsService.js'
 
 export async function handleEditedMessage(ctx: Context) {
 	const msg = ctx.editedBusinessMessage!
@@ -45,7 +46,7 @@ export async function handleEditedMessage(ctx: Context) {
 		})
 	}
 
-	incrementEdited(original.ownId, msg.chat.id)
+	statsService.incrementEdited(original.ownId, msg.chat.id)
 
 	return
 }
