@@ -40,9 +40,9 @@ export async function handleDeletedMessage(ctx: Context) {
 				{ parse_mode: 'HTML' }
 			)
 		} else {
-			const encoded = JSON.parse(original.content)
-			const fileId = decryptText(encoded.fileId || '')
-			const captionText = decryptText(encoded.caption || '')
+			const encoded = JSON.parse(decryptText(original.content))
+			const fileId: string = encoded.fileId || ''
+			const captionText: string = encoded.caption || ''
 
 			if (!fileId) continue
 

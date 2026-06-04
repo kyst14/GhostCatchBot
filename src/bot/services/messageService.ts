@@ -14,10 +14,12 @@ class messageService {
 		const encrypted =
 			media.type === 'TEXT'
 				? encryptText(media.content)
-				: JSON.stringify({
-						fileId: encryptText(media.content),
-						caption: encryptText(msg.caption || ''),
-					})
+				: encryptText(
+						JSON.stringify({
+							fileId: media.content,
+							caption: msg.caption || '',
+						})
+					)
 
 		const ownId = await ctx.getBusinessConnection().then(conn => conn.user.id)
 		const createdAt = new Date(msg.date * 1000)
@@ -134,7 +136,7 @@ class messageService {
 		const user = conn.user
 
 		if (!user) return false
-		return false // user.id === ctx.businessMessage?.from?.id
+		return user.id === ctx.businessMessage?.from?.id
 	}
 }
 
