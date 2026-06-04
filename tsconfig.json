@@ -32,10 +32,10 @@
 		// "noPropertyAccessFromIndexSignature": true,
 		"moduleResolution": "nodenext",
 
-    "paths": {
-      "baseUrl": ["."],
-      "@/*": ["./src/*"]
-    },
+		"paths": {
+			"baseUrl": ["."],
+			"@/*": ["./src/*"]
+		},
 
 		// Recommended Options
 		"strict": true,

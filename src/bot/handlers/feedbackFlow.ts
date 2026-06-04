@@ -26,6 +26,7 @@ export async function handleFeedbackFlow(ctx: Context, next: NextFunction) {
 				)
 				return await ctx.reply('✅ Reply sended successfully to the user!')
 			} catch (err) {
+				console.error(err)
 				return await ctx.reply(
 					'❌ Failed to send reply to the user. Probably the user has blocked the bot.'
 				)
@@ -62,6 +63,7 @@ export async function handleFeedbackFlow(ctx: Context, next: NextFunction) {
 
 			return await ctx.reply('👍 Thank you! Your message was sended to admin!')
 		} catch (err) {
+			console.error(err)
 			return await ctx.reply('❌ Failed to send message to the admin.')
 		}
 	}

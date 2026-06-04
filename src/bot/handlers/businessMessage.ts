@@ -1,4 +1,3 @@
-import { encryptText } from '@/utils/encryption.js'
 import { InputFile, type Context } from 'grammy'
 import msgService from '../services/messageService.js'
 import statsService from '../services/statsService.js'
@@ -8,12 +7,10 @@ export async function handleBusinessMessage(ctx: Context) {
 	if (!(await msgService.isOwn(ctx))) {
 		const msg = ctx.businessMessage!
 
-		const ownId = await ctx.getBusinessConnection().then(conn => conn.user.id)
+		const media = msgService.extractMedia(msg)
+		if (!media) return
 
-		msgService.saveBusinessMessage(ctx, msg, {
-			type: 'TEXT',
-			content: encryptText(msg.text ?? ''),
-		})
+		msgService.saveBusinessMessage(ctx, msg, media)
 
 		return
 	} else if (

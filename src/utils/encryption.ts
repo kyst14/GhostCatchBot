@@ -48,58 +48,7 @@ export function decryptText(encryptedWithIv: string): string {
 		})
 
 		return decrypted.toString(CryptoJS.enc.Utf8)
-	} catch (error) {
+	} catch {
 		throw new Error('Failed to decrypt text. Key mismatch or corrupted data.')
-	}
-}
-
-// === Encryption files (Buffer) ===
-export function encryptBuffer(buffer: Buffer): Buffer {
-	const wordArray = CryptoJS.lib.WordArray.create(buffer as any)
-	const iv = CryptoJS.lib.WordArray.random(16)
-
-	const encrypted = CryptoJS.AES.encrypt(wordArray, AES_KEY, {
-		iv: iv,
-		mode: CryptoJS.mode.CBC,
-		padding: CryptoJS.pad.Pkcs7,
-	})
-
-	// Convert everything to a single Hex string
-	const outputHex =
-		iv.toString(CryptoJS.enc.Hex) + encrypted.ciphertext.toString(CryptoJS.enc.Hex)
-	return Buffer.from(outputHex, 'hex')
-}
-
-export function decryptBuffer(encryptedBuffer: Buffer): Buffer {
-	try {
-		const hexString = encryptedBuffer.toString('hex')
-		if (hexString.length < 32) throw new Error('Invalid encrypted buffer')
-
-		const ivHex = hexString.substring(0, 32)
-		const ciphertextHex = hexString.substring(32)
-
-		const iv = CryptoJS.enc.Hex.parse(ivHex)
-		const ciphertext = CryptoJS.enc.Hex.parse(ciphertextHex)
-
-		const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext })
-
-		const decryptedWordArray = CryptoJS.AES.decrypt(cipherParams, AES_KEY, {
-			iv: iv,
-			mode: CryptoJS.mode.CBC,
-			padding: CryptoJS.pad.Pkcs7,
-		})
-
-		const decryptedBuffer = Buffer.from(
-			decryptedWordArray.toString(CryptoJS.enc.Base64),
-			'base64'
-		)
-
-		if (decryptedBuffer.length === 0) {
-			throw new Error('Decryption produced empty result')
-		}
-
-		return decryptedBuffer
-	} catch (error) {
-		throw new Error('Failed to decrypt buffer. Key mismatch or corrupted data.')
 	}
 }

@@ -11,13 +11,13 @@ interface Media<Type extends string = MessageType> {
 
 class messageService {
 	async saveBusinessMessage(ctx: Context, msg: Message, media: Media) {
-		const conn = await ctx.getBusinessConnection()
-		const userId = conn.user.id
-
 		const encrypted =
 			media.type === 'TEXT'
 				? encryptText(media.content)
-				: encryptText(media.content) + '/&/' + encryptText(msg.caption || '')
+				: JSON.stringify({
+						fileId: encryptText(media.content),
+						caption: encryptText(msg.caption || ''),
+					})
 
 		const ownId = await ctx.getBusinessConnection().then(conn => conn.user.id)
 		const createdAt = new Date(msg.date * 1000)
@@ -134,7 +134,7 @@ class messageService {
 		const user = conn.user
 
 		if (!user) return false
-		return user.id === ctx.businessMessage?.from?.id
+		return false // user.id === ctx.businessMessage?.from?.id
 	}
 }
 
