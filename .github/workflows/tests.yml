@@ -16,11 +16,15 @@ jobs:
               with:
                   node-version: 24
 
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+
             - name: Install dependencies
-              run: npm install
+              run: bun install
 
             - name: Run lint
-              run: npm link
-            
+              run: bun link
+
             - name: Build
-              run: npm run build
+              run: bun run build
