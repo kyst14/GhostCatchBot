@@ -1,5 +1,8 @@
 # 👻 Ghost Catch Bot
 
+![License](https://img.shields.io/github/license/kyst14/GhostCatchBot)
+![CI](https://github.com/kyst14/GhostCatchBot/actions/workflows/tests.yml/badge.svg)
+
 A Telegram bot that helps you track, save, and view deleted and edited messages in
 Telegram Business chats.
 

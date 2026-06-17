@@ -30,3 +30,7 @@ jobs:
               run: bun run build
               env:
                 DATABASE_URL: "postgresql://user:pass@localhost:5432/db" # FAKE DB
+
+            - name: Trigger Render Deploy
+              if: success()
+              run: curl "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
