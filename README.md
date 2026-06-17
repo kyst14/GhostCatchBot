@@ -1,32 +1,46 @@
 # 👻 Ghost Catch Bot
 
-A Telegram bot that helps you track, save, and view deleted and edited messages in Telegram Business chats.
+A Telegram bot that helps you track, save, and view deleted and edited messages in
+Telegram Business chats.
 
 Built with **Node.js + TypeScript + Prisma + grammY + Express (Webhook)**.
 
-Telegram does not natively allow recovering deleted or edited messages. **Ghost Catch Bot** solves this by safely storing message history from Telegram Business chats before it disappears.
+Telegram does not natively allow recovering deleted or edited messages. **Ghost Catch
+Bot** solves this by safely storing message history from Telegram Business chats before it
+disappears.
+
+## ⚠ WARNING ⚠
+
+This project is currently under development and not production-ready. Expect possible
+bugs, breaking changes, and missing features. Use it at your own risk. If you encounter
+any issues, feel free to report them in the
+[Issues section](https://github.com/kyst14/GhostCatchBot/issues) or contribute
+improvements via a Pull Request.
 
 ---
 
 ## ✨ Features
 
-* **🗑️ View Deleted Messages:** Never miss what was sent, even if the sender deletes it.
-* **📝 Track Edits:** View edited messages side-by-side with their original content.
-* **🔒 Protect Media:** Save ephemeral or protected media before it expires.
-* **📊 Analytics:** View user and chat message statistics.
-* **🔌 Seamless Integration:** Quick and easy connection to your Telegram Business account.
+- **🗑️ View Deleted Messages:** Never miss what was sent, even if the sender deletes it.
+- **📝 Track Edits:** View edited messages side-by-side with their original content.
+- **🔒 Protect Media:** Save ephemeral or protected media before it expires.
+- **📊 Analytics:** View user and chat message statistics.
+- **🔌 Seamless Integration:** Quick and easy connection to your Telegram Business
+  account.
 
 ---
 
 ## 🚀 How it works
 
 The bot connects to your Telegram Business account via Webhooks and listens for:
-* Incoming messages
-* Message edits
-* Message deletions
-* Protected/ephemeral media events
 
-> ⚠️ **Note:** To ensure user privacy, all captured data is encrypted at rest and automatically wiped using strict expiration rules.
+- Incoming messages
+- Message edits
+- Message deletions
+- Protected/ephemeral media events
+
+> ⚠️ **Note:** To ensure user privacy, all captured data is encrypted at rest and
+> automatically wiped using strict expiration rules.
 
 ---
 
@@ -40,12 +54,12 @@ The bot connects to your Telegram Business account via Webhooks and listens for:
 
 ## ⚙️ Tech Stack
 
-* **Runtime:** Node.js / Bun
-* **Language:** TypeScript
-* **Bot Framework:** grammY (Telegram Bot API)
-* **Database & ORM:** PostgreSQL + Prisma ORM
-* **Server:** Express (for Webhook handling)
-* **Utilities:** `node-cron` (cleanup jobs), `crypto-js` (encryption), `dotenv`
+- **Runtime:** Node.js / Bun
+- **Language:** TypeScript
+- **Bot Framework:** grammY (Telegram Bot API)
+- **Database & ORM:** PostgreSQL + Prisma ORM
+- **Server:** Express (for Webhook handling)
+- **Utilities:** `node-cron` (cleanup jobs), `crypto-js` (encryption), `dotenv`
 
 ---
 
@@ -130,4 +144,4 @@ bun start
 
 ## 📄 License
 
-This project is licensed under the __MIT License__.
+This project is licensed under the **MIT License**.
