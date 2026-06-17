@@ -1,11 +1,22 @@
+/*
+Copyright (C) 2026 kyst14
+
+This file is part of Ghost Catch Bot.
+
+Ghost Catch Bot is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
+*/
+
 import prisma from '@/db/db.js'
 import { decryptText } from '@/utils/encryption.js'
+import type { Message } from '@prisma/client'
 import type { Context } from 'grammy'
 import { escape } from 'html-escaper'
 import bot from '../lib/bot.js'
 import statsService from '../services/statsService.js'
 import tgService from '../services/telegramService.js'
-import type { Message } from '@prisma/client'
 
 const MAX_RETRY_TIME = 5000 // 5s
 const RETRY_INTERVAL = 500 // 500ms

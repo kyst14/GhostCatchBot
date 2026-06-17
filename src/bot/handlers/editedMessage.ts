@@ -1,3 +1,14 @@
+/*
+Copyright (C) 2026 kyst14
+
+This file is part of Ghost Catch Bot.
+
+Ghost Catch Bot is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
+*/
+
 import prisma from '@/db/db.js'
 import { decryptText, encryptText } from '@/utils/encryption.js'
 import type { Context } from 'grammy'
@@ -16,7 +27,7 @@ export async function handleEditedMessage(ctx: Context) {
 				ownId: conn.user.id,
 				tgChatId: msg.chat.id,
 				tgId: msg.message_id,
-			}
+			},
 		},
 	})
 	if (!original) return
@@ -47,15 +58,14 @@ export async function handleEditedMessage(ctx: Context) {
 			},
 			data: {
 				content: encryptText(msg.text!),
-			}
+			},
 		})
 
 		statsService.incrementEdited(original.ownId, {
 			tgId: original.tgChatId,
-			ownId: original.ownId
+			ownId: original.ownId,
 		})
 	}
-
 
 	return
 }
