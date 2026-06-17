@@ -7,11 +7,16 @@ import statsService from '../services/statsService.js'
 
 export async function handleEditedMessage(ctx: Context) {
 	const msg = ctx.editedBusinessMessage!
+	const conn = await ctx.getBusinessConnection()
+	if (!msg.from || !conn) return
 
-	const original = await prisma.message.findFirst({
+	const original = await prisma.message.findUnique({
 		where: {
-			tgId: msg.message_id,
-			chatId: msg.chat.id,
+			own_tg_identity: {
+				ownId: conn.user.id,
+				tgChatId: msg.chat.id,
+				tgId: msg.message_id,
+			}
 		},
 	})
 	if (!original) return
@@ -42,11 +47,15 @@ export async function handleEditedMessage(ctx: Context) {
 			},
 			data: {
 				content: encryptText(msg.text!),
-			},
+			}
+		})
+
+		statsService.incrementEdited(original.ownId, {
+			tgId: original.tgChatId,
+			ownId: original.ownId
 		})
 	}
 
-	statsService.incrementEdited(original.ownId, msg.chat.id)
 
 	return
 }

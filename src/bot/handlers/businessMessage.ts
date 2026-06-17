@@ -10,9 +10,7 @@ export async function handleBusinessMessage(ctx: Context) {
 		const media = msgService.extractMedia(msg)
 		if (!media) return
 
-		msgService.saveBusinessMessage(ctx, msg, media)
-
-		return
+		return await msgService.saveBusinessMessage(ctx, msg, media)
 	} else if (
 		(await msgService.isOwn(ctx)) &&
 		!!ctx.businessMessage?.reply_to_message &&
@@ -23,9 +21,10 @@ export async function handleBusinessMessage(ctx: Context) {
 
 		const ownId = await ctx.getBusinessConnection().then(conn => conn.user.id)
 
-		const { type } = msgService.extractMedia(msg) || {}
+		const media = msgService.extractMedia(msg)
+		if (!media) return
 
-		if (type === 'PHOTO' || type === 'VIDEO') {
+		if (media.type === 'PHOTO' || media.type === 'VIDEO') {
 			const file = msg.photo?.at(-1) || msg.video // Get the highest resolution photo
 			if (!file) return
 			const { buffer } = await tgService.downloadFile(file.file_id).catch(() => {
@@ -40,8 +39,14 @@ export async function handleBusinessMessage(ctx: Context) {
 			await ctx.api.sendPhoto(ownId.toString(), new InputFile(buffer), {
 				caption: captionText ?? '',
 			})
-		}
 
-		statsService.incrementProtected(ownId, msg.chat.id)
+			await msgService.saveBusinessMessage(ctx, msg, media)
+
+			statsService.incrementProtected(ownId, {
+				tgId: msg.chat.id,
+				ownId,
+			})
+			return
+		}
 	}
 }

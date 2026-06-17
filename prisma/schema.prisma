@@ -22,7 +22,10 @@ model User {
 }
 
 model Chat {
-  id                   BigInt           @id
+  id                   String           @id @default(cuid())
+  
+  tgId                 BigInt
+  ownId                BigInt
 
   // Statistics
   messagesDeleted      Int              @default(0)
@@ -32,10 +35,13 @@ model Chat {
   lastAccessedAt       DateTime         @default(now())
   expiresAt            DateTime
 
-  users                User[]           @relation("UserChats")
+  own                  User             @relation("UserChats", fields: [ownId], references: [id], onDelete: Cascade)
   messages             Message[]
 
+  @@index([tgId, ownId])
   @@index([expiresAt])
+
+  @@unique([tgId, ownId], name: "tgId_ownId")
 }
 
 model Message {
@@ -48,19 +54,19 @@ model Message {
   lastAccessedAt       DateTime         @default(now())
   expiresAt            DateTime
 
-  // Foreign keys
-  chatId               BigInt
+  tgChatId             BigInt
   ownId                BigInt
+
   senderName           String
 
-  // Relations
-  chat                 Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chat                 Chat             @relation(fields: [tgChatId, ownId], references: [tgId, ownId], onDelete: Cascade)
   own                  User             @relation(fields: [ownId], references: [id])
 
-  @@index([chatId])
   @@index([ownId])
   @@index([tgId])
   @@index([expiresAt])
+
+  @@unique([ownId, tgChatId, tgId], name: "own_tg_identity")
 }
 
 enum MessageType {

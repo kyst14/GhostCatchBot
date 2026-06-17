@@ -3,30 +3,29 @@ import type { Context } from 'grammy'
 
 class ChatService {
 	async connectChat(ctx: Context) {
-		if (!ctx.businessMessage) return
+		const conn = await ctx.getBusinessConnection()
+		if (!conn || !ctx.businessMessage) return
 		return await prisma.chat.upsert({
 			where: {
-				id: ctx.businessMessage?.chat.id,
+				tgId_ownId: {
+					tgId: ctx.businessMessage.chat.id,
+					ownId: conn.user.id,
+				},
 			},
-			update: {},
-			create: {
-				id: ctx.businessMessage?.chat.id,
+			update: {
 				lastAccessedAt: new Date(),
 				expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
 			},
-		})
-	}
-
-	async touchChat(id: string | number) {
-		const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
-
-		await prisma.chat.updateMany({
-			where: {
-				id: Number(id),
-			},
-			data: {
+			create: {
+				tgId: ctx.businessMessage?.chat.id,
 				lastAccessedAt: new Date(),
-				expiresAt,
+				expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+
+				own: {
+					connect: {
+						id: conn.user.id,
+					},
+				},
 			},
 		})
 	}

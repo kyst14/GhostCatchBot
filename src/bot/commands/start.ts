@@ -15,7 +15,10 @@ export async function startCommand(ctx: Context) {
 		if (user) {
 			const chat = await prisma.chat.findUnique({
 				where: {
-					id: Number(chatId.replace('bizChat', '')),
+					tgId_ownId: {
+						tgId: Number(chatId.replace('bizChat', '') || chatId),
+						ownId: user.id,
+					},
 				},
 			})
 
@@ -27,7 +30,7 @@ export async function startCommand(ctx: Context) {
 
 			const msg = await prisma.message.findFirst({
 				where: {
-					chatId: chat.id,
+					tgChatId: Number(chat.id),
 				},
 				orderBy: {
 					createdAt: 'desc', // Get the latest message in the chat to extract sender name

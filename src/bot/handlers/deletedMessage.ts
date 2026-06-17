@@ -58,7 +58,10 @@ export async function handleDeletedMessage(ctx: Context) {
 			})
 		}
 
-		statsService.incrementDeleted(original.ownId, original.chatId)
+		statsService.incrementDeleted(original.ownId, {
+			tgId: original.tgChatId,
+			ownId: original.ownId,
+		})
 
 		await prisma.message.delete({
 			where: { id: original.id },

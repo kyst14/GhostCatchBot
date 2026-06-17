@@ -13,13 +13,13 @@ export async function businessMiddleware(ctx: Context, next: () => Promise<void>
 	}
 
 	const conn = await ctx.getBusinessConnection().catch(() => undefined)
+	if (!conn) return next()
 
 	await userService.connectUser(conn)
 	await chatService.connectChat(ctx)
 
 	if (ctx.businessMessage) {
-		await chatService.touchChat(ctx.businessMessage.chat.id)
-		await msgService.touchMessage(ctx.businessMessage.message_id)
+		await msgService.touchMessage(ctx)
 	}
 
 	return next()

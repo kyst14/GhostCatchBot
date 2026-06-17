@@ -37,7 +37,10 @@ class messageService {
 
 				chat: {
 					connect: {
-						id: msg.chat.id,
+						tgId_ownId: {
+							ownId,
+							tgId: msg.chat.id,
+						},
 					},
 				},
 				own: {
@@ -117,12 +120,15 @@ class messageService {
 		return null
 	}
 
-	async touchMessage(id: string | number) {
+	async touchMessage(ctx: Context) {
+		if (!ctx.businessMessage) return
 		const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
 
-		await prisma.message.updateMany({
+		return await prisma.message.updateMany({
 			where: {
-				tgId: Number(id),
+				ownId: await ctx.getBusinessConnection().then(conn => conn.user.id),
+				tgId: ctx.businessMessage?.message_id,
+				tgChatId: ctx.businessMessage?.chat.id,
 			},
 			data: {
 				lastAccessedAt: new Date(),
@@ -136,7 +142,7 @@ class messageService {
 		const user = conn.user
 
 		if (!user) return false
-		return user.id === ctx.businessMessage?.from?.id
+		return false // user.id === ctx.businessMessage?.from?.id
 	}
 }
 
