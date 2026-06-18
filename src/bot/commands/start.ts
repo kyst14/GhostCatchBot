@@ -12,6 +12,7 @@ You should have received a copy of the GNU General Public License along with Foo
 import prisma from '@/db/db.js'
 import { decryptText } from '@/utils/encryption.js'
 import type { Context } from 'grammy'
+import { privacyCommand } from './privacy.js'
 
 export async function startCommand(ctx: Context) {
 	const chatId = ctx.match?.toString()
@@ -76,20 +77,5 @@ export async function startCommand(ctx: Context) {
 		'CAACAgQAAxkBAAEqCt5qH_ZRrr6naLpYVaVaar7KYL1umAACChAAAkKv4FIZCCMqEYiOcjsE'
 	)
 
-	await ctx.reply(
-		`Using this bot you agree to our <b>Privacy Policy</b>. You can read it here:`,
-		{
-			parse_mode: 'HTML',
-			reply_markup: {
-				inline_keyboard: [
-					[
-						{
-							text: 'Privacy Policy',
-							url: 'https://telegra.ph/Privacy-Policy-for-Ghost-Catch-Bot-06-02',
-						},
-					],
-				],
-			},
-		}
-	)
+	return await privacyCommand(ctx)
 }

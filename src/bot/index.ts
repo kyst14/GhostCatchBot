@@ -27,12 +27,14 @@ import {
 } from './handlers/feedbackFlow.js'
 import bot, { ADMIN_ID, isDev, WEBHOOK } from './lib/bot.js'
 import { businessMiddleware } from './middleware/businessContext.js'
+import { privacyCommand } from './commands/privacy.js'
 
 bot.command('start', startCommand)
 bot.command('help', helpCommand)
 bot.command('connect', connectCommand)
 bot.command('stats', statsCommand)
 bot.command('about', aboutCommand)
+bot.command('privacy', privacyCommand)
 
 // Feedback
 bot.command('feedback', feedbackCommand)
