@@ -14,12 +14,16 @@ import type { Context } from 'grammy'
 
 export async function statsCommand(ctx: Context) {
 	if (!ctx.from?.id) return
+
+	const loading = await ctx.reply('𝙇𝙤𝙖𝙙𝙞𝙣𝙜...') // loading
+
 	const user = await prisma.user.findUnique({
 		where: {
 			id: ctx.from.id,
 		},
 	})
 
+	await ctx.deleteMessages([loading.message_id])
 	if (!user) {
 		return await ctx.reply(
 			`🚫 You are not connected to your Business account. Please use /connect command to help you.`
