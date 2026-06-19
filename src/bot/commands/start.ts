@@ -18,6 +18,8 @@ export async function startCommand(ctx: Context) {
 	const chatId = ctx.match?.toString()
 
 	if (chatId && ctx.message) {
+		const loading = await ctx.reply('𝙇𝙤𝙖𝙙𝙞𝙣𝙜...') // loading
+
 		const user = await prisma.user.findUnique({
 			where: {
 				id: ctx.message?.from.id,
@@ -35,6 +37,7 @@ export async function startCommand(ctx: Context) {
 			})
 
 			if (!chat) {
+				await ctx.deleteMessages([loading.message_id])
 				return await ctx.reply(
 					`🚫 Chat not found. We don't have any information about this chat.`
 				)
@@ -42,7 +45,9 @@ export async function startCommand(ctx: Context) {
 
 			const msg = await prisma.message.findFirst({
 				where: {
-					tgChatId: Number(chat.id),
+					chat: {
+						id: chat.id,
+					}
 				},
 				orderBy: {
 					createdAt: 'desc', // Get the latest message in the chat to extract sender name
@@ -54,6 +59,7 @@ export async function startCommand(ctx: Context) {
 
 			const username = decryptText(msg?.senderName || '') || 'Unknown'
 
+			await ctx.deleteMessages([loading.message_id])
 			return await ctx.reply(
 				`Chat with @${username}.\n\n` +
 					`Statistics for this chat:\n` +
@@ -62,6 +68,7 @@ export async function startCommand(ctx: Context) {
 					`- Protected messages: ${chat.messagesProtected}\n\n`
 			)
 		} else {
+			await ctx.deleteMessages([loading.message_id])
 			return await ctx.reply(
 				`🚫 There was an error processing your request. Please try again later or contact support.`
 			)
