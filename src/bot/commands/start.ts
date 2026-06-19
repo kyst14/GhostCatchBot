@@ -47,7 +47,7 @@ export async function startCommand(ctx: Context) {
 				where: {
 					chat: {
 						id: chat.id,
-					}
+					},
 				},
 				orderBy: {
 					createdAt: 'desc', // Get the latest message in the chat to extract sender name
@@ -75,9 +75,13 @@ export async function startCommand(ctx: Context) {
 		}
 	}
 
-	await ctx.reply(
-		`👋 Hello! I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
-			`To get started, please use /help command to see available commands and features.`
+	await ctx.replyWithPhoto(
+		'https://opengraph.githubassets.com/1/kyst14/ghostcatchbot',
+		{
+			caption:
+				`👋 Hello! I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
+				`To get started, please use /help command to see available commands and features.`,
+		}
 	)
 
 	await ctx.replyWithSticker(
