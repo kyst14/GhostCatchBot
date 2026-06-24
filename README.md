@@ -1,9 +1,9 @@
 # 👻 Ghost Catch Bot
 
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/kest14/GhostCatchBot/pulls)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/kest14/GhostCatchBot/issues)
-![License](https://img.shields.io/github/license/kyst14/GhostCatchBot)
-![CI](https://github.com/kyst14/GhostCatchBot/actions/workflows/tests.yml/badge.svg)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/kyst14/GhostCatchBot/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/kyst14/GhostCatchBot/pulls)
+[![License](https://img.shields.io/github/license/kyst14/GhostCatchBot)](./LICENSE)
+[![CI](https://github.com/kyst14/GhostCatchBot/actions/workflows/tests.yml/badge.svg)](https://github.com/kyst14/GhostCatchBot)
 
 A Telegram bot that helps you track, save, and view deleted and edited messages in
 Telegram Business chats.
