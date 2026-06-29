@@ -15,6 +15,7 @@ import { aboutCommand } from './commands/about.js'
 import { connectCommand } from './commands/connect.js'
 import { feedbackCommand } from './commands/feedback.js'
 import { helpCommand } from './commands/help.js'
+import { privacyCommand } from './commands/privacy.js'
 import { startCommand } from './commands/start.js'
 import { statsCommand } from './commands/stats.js'
 import { handleBusinessConnection } from './handlers/businessConnection.js'
@@ -26,8 +27,9 @@ import {
 	handleFeedbackFlowCallback,
 } from './handlers/feedbackFlow.js'
 import bot, { ADMIN_ID, isDev, WEBHOOK } from './lib/bot.js'
-import { businessMiddleware } from './middleware/businessContext.js'
-import { privacyCommand } from './commands/privacy.js'
+import { businessMiddleware, mainMiddleware } from './middleware/middleware.js'
+
+bot.use(mainMiddleware)
 
 bot.command('start', startCommand)
 bot.command('help', helpCommand)
@@ -41,7 +43,14 @@ bot.command('feedback', feedbackCommand)
 bot.callbackQuery(/^reply_to:(\d+)$/, handleFeedbackFlowCallback)
 bot.on('message', handleFeedbackFlow)
 
-bot.use(businessMiddleware)
+bot.use().filter(
+	ctx =>
+		ctx.has('business_connection') ||
+		ctx.has('business_message') ||
+		ctx.has('edited_business_message') ||
+		ctx.has('deleted_business_messages'),
+	businessMiddleware
+)
 
 // Catch Business connection
 bot.on('business_connection', handleBusinessConnection)

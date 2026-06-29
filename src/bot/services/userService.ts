@@ -10,27 +10,45 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
+import type { Context } from 'grammy'
 import type { BusinessConnection } from 'grammy/types'
 
 export class UserService {
-	async connectUser(conn: BusinessConnection | undefined) {
-		if (!conn) return
-		return await prisma.user.upsert({
-			where: {
-				id: conn.user.id,
-			},
+	async connectUser(ctx: Context) {
+		if (!ctx.from || !ctx.chat) return
+
+		let conn: BusinessConnection | undefined = undefined
+
+		// Business connection
+		if ( 
+			ctx.has('business_message') ||
+			ctx.has('edited_business_message') ||
+			ctx.has('business_connection')
+		) {
+			conn = await ctx.getBusinessConnection()
+		}
+
+		const id = conn?.user.id ?? ctx.from.id
+		const username =
+			conn?.user.username ??
+			conn?.user.first_name ??
+			ctx.from.username ??
+			ctx.from.first_name
+		const connId = conn?.id ?? ''
+
+		return prisma.user.upsert({
+			where: { id },
 			update: {
-				username: conn.user.username || conn.user.first_name,
-				connId: conn.id,
+				username,
+				connId,
 			},
 			create: {
-				id: conn.user.id,
-				username: conn.user.username || conn.user.first_name,
-				connId: conn.id,
+				id,
+				username,
+				connId,
 			},
 		})
 	}
 }
-
 export const userService = new UserService()
 export default userService

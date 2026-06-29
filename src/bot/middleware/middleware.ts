@@ -10,9 +10,14 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import type { Context } from 'grammy'
-import chatService from '../services/chatService.js'
 import msgService from '../services/messageService.js'
 import userService from '../services/userService.js'
+
+export async function mainMiddleware(ctx: Context, next: () => Promise<void>) {
+	await userService.connectUser(ctx)
+
+	return next()
+}
 
 export async function businessMiddleware(ctx: Context, next: () => Promise<void>) {
 	if (
@@ -26,8 +31,7 @@ export async function businessMiddleware(ctx: Context, next: () => Promise<void>
 	const conn = await ctx.getBusinessConnection().catch(() => undefined)
 	if (!conn) return next()
 
-	await userService.connectUser(conn)
-	await chatService.connectChat(ctx)
+	await userService.connectUser(ctx)
 
 	if (ctx.businessMessage) {
 		await msgService.touchMessage(ctx)
