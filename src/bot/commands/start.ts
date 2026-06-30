@@ -15,7 +15,7 @@ import type { Context } from 'grammy'
 import { privacyCommand } from './privacy.js'
 
 export async function startCommand(ctx: Context) {
-	const chatId = ctx.match?.toString()
+	const chatId = ctx.match?.toString().replace('bizChat', '') || ctx.match?.toString();
 
 	if (chatId && ctx.message) {
 		const loading = await ctx.reply('𝙇𝙤𝙖𝙙𝙞𝙣𝙜...') // loading
@@ -30,7 +30,7 @@ export async function startCommand(ctx: Context) {
 			const chat = await prisma.chat.findUnique({
 				where: {
 					tgId_ownId: {
-						tgId: Number(chatId.replace('bizChat', '') || chatId),
+						tgId: Number(chatId) || -1,
 						ownId: user.id,
 					},
 				},

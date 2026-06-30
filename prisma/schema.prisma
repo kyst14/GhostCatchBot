@@ -11,6 +11,7 @@ You should have received a copy of the GNU General Public License along with Foo
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -21,7 +22,9 @@ model User {
   id                   BigInt           @id @unique
   username             String
 
-  connId               String           @unique
+  connId               String?           @unique
+
+  role                 Role             @default(USER)
 
   // Statistics
   messagesDeleted      Int              @default(0)
@@ -30,6 +33,14 @@ model User {
 
   chats                Chat[]           @relation("UserChats")
   messages             Message[]
+
+  @@unique([role], map: "only_one_owner", where: { role: "OWNER" })
+}
+
+enum Role {
+  USER      // just user
+  ADMIN     // mute/bun/browsing users
+  OWNER     // Can do anything
 }
 
 model Chat {
@@ -79,6 +90,7 @@ model Message {
 
   @@unique([ownId, tgChatId, tgId], name: "own_tg_identity")
 }
+
 
 enum MessageType {
   TEXT

@@ -40,7 +40,7 @@ export async function handleBusinessConnection(ctx: Context) {
 				id: conn.user.id,
 			},
 			data: {
-				connId: '',
+				connId: null,
 			},
 		})
 	}

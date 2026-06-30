@@ -10,7 +10,7 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import { InlineKeyboard, type Context, type NextFunction } from 'grammy'
-import { ADMIN_ID } from '../lib/bot.js'
+import { OWN_ID } from '../lib/bot.js'
 
 export async function handleFeedbackFlow(ctx: Context, next: NextFunction) {
 	const replyTo = ctx.message?.reply_to_message
@@ -20,7 +20,7 @@ export async function handleFeedbackFlow(ctx: Context, next: NextFunction) {
 	const replyText = replyTo.text || ''
 
 	// --- ADMIN ---
-	if (ctx.from?.id === ADMIN_ID) {
+	if (ctx.from?.id === OWN_ID) {
 		const match = replyText.match(/ID:\s*(\d+)/)
 
 		if (match) {
@@ -58,13 +58,13 @@ export async function handleFeedbackFlow(ctx: Context, next: NextFunction) {
 			)
 
 			await ctx.api.sendMessage(
-				ADMIN_ID,
+				OWN_ID,
 				`📨 <b>Message from @${ctx.from?.username || ctx.from?.first_name}:</b>`,
 				{ parse_mode: 'HTML' }
 			)
 
 			await ctx.api.copyMessage(
-				ADMIN_ID,
+				OWN_ID,
 				ctx.message.chat.id,
 				ctx.message.message_id,
 				{ reply_markup: keyboard }

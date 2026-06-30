@@ -26,7 +26,7 @@ import {
 	handleFeedbackFlow,
 	handleFeedbackFlowCallback,
 } from './handlers/feedbackFlow.js'
-import bot, { ADMIN_ID, isDev, WEBHOOK } from './lib/bot.js'
+import bot, { OWN_ID, isDev, WEBHOOK } from './lib/bot.js'
 import { businessMiddleware, mainMiddleware } from './middleware/middleware.js'
 
 bot.use(mainMiddleware)
@@ -69,7 +69,7 @@ function onError(err: Error) {
 		console.error('❌ Uncaught Exception:', err)
 		process.exit(1)
 	} else {
-		bot.api.sendMessage(ADMIN_ID, `❌ Uncaught Exception: ${err.message}`)
+		bot.api.sendMessage(OWN_ID, `❌ Uncaught Exception: ${err.message}`)
 	}
 }
 

@@ -11,7 +11,8 @@
 		"start": "node dist/src/index.js",
 		"prisma": "bunx prisma generate",
 		"lint": "eslint .",
-		"lint:fix": "eslint . --fix"
+		"lint:fix": "eslint . --fix",
+		"seed-owner": "tsx src/seed-owner.ts"
 	},
 	"peerDependencies": {
 		"typescript": "^6.0.3"

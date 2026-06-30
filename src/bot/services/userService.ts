@@ -12,15 +12,36 @@ You should have received a copy of the GNU General Public License along with Foo
 import prisma from '@/db/db.js'
 import type { Context } from 'grammy'
 import type { BusinessConnection } from 'grammy/types'
+import { OWN_ID } from '../lib/bot.js'
 
 export class UserService {
+	async isOwner(ctx: Context) {
+		if (!ctx.from) return false
+
+		return ctx.from.id === OWN_ID
+	}
+
+	async isAdmin(ctx: Context) {
+		if (!ctx.from) return false
+
+		prisma.user
+			.findUnique({
+				where: { id: ctx.from.id },
+				select: { role: true },
+			})
+			.then(user => {
+				if (user && ['ADMIN', 'OWNER'].includes(user.role)) return true
+				return false
+			})
+	}
+
 	async connectUser(ctx: Context) {
 		if (!ctx.from || !ctx.chat) return
 
 		let conn: BusinessConnection | undefined = undefined
 
 		// Business connection
-		if ( 
+		if (
 			ctx.has('business_message') ||
 			ctx.has('edited_business_message') ||
 			ctx.has('business_connection')
@@ -34,7 +55,7 @@ export class UserService {
 			conn?.user.first_name ??
 			ctx.from.username ??
 			ctx.from.first_name
-		const connId = conn?.id ?? ''
+		const connId = conn?.id || null
 
 		return prisma.user.upsert({
 			where: { id },
