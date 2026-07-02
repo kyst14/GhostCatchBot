@@ -10,9 +10,9 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
-import type { Context } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 
-export async function statsCommand(ctx: Context) {
+export async function statsCommand(ctx: MyContext) {
 	if (!ctx.from?.id) return
 
 	const loading = await ctx.reply('𝙇𝙤𝙖𝙙𝙞𝙣𝙜...') // loading

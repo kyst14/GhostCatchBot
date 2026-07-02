@@ -11,6 +11,7 @@ You should have received a copy of the GNU General Public License along with Foo
 
 import 'dotenv/config'
 
+import { conversations, createConversation } from '@grammyjs/conversations'
 import { aboutCommand } from './commands/about.js'
 import { connectCommand } from './commands/connect.js'
 import { feedbackCommand } from './commands/feedback.js'
@@ -22,12 +23,18 @@ import { handleBusinessConnection } from './handlers/businessConnection.js'
 import { handleBusinessMessage } from './handlers/businessMessage.js'
 import { handleDeletedMessage } from './handlers/deletedMessage.js'
 import { handleEditedMessage } from './handlers/editedMessage.js'
-import {
-	handleFeedbackFlow,
-	handleFeedbackFlowCallback,
-} from './handlers/feedbackFlow.js'
-import bot, { OWN_ID, isDev, WEBHOOK } from './lib/bot.js'
+import { handleFeedbackFlowCallback } from './handlers/feedbackFlow.js'
+import bot, { isDev, OWN_ID, WEBHOOK } from './lib/bot.js'
 import { businessMiddleware, mainMiddleware } from './middleware/middleware.js'
+import { convoMiddleware } from './middleware/convoMiddleware.js'
+
+// Conversations
+bot.use(conversations())
+
+bot.on("message:entities:bot_command", convoMiddleware)
+
+bot.use(createConversation(feedbackCommand))
+bot.use(createConversation(handleFeedbackFlowCallback))
 
 bot.use(mainMiddleware)
 
@@ -39,9 +46,12 @@ bot.command('about', aboutCommand)
 bot.command('privacy', privacyCommand)
 
 // Feedback
-bot.command('feedback', feedbackCommand)
-bot.callbackQuery(/^reply_to:(\d+)$/, handleFeedbackFlowCallback)
-bot.on('message', handleFeedbackFlow)
+bot.command('feedback', async ctx => {
+	await ctx.conversation.enter('feedbackCommand')
+})
+bot.callbackQuery(/^reply_to:(\d+)$/, async ctx => {
+	await ctx.conversation.enter('handleFeedbackFlowCallback', ctx.match?.[1])
+})
 
 bot.use().filter(
 	ctx =>

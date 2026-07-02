@@ -9,33 +9,24 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
+import type { NextFunction } from 'grammy'
 import type { MyContext } from '../lib/bot.js'
-import msgService from '../services/messageService.js'
-import userService from '../services/userService.js'
 
-export async function mainMiddleware(ctx: MyContext, next: () => Promise<void>) {
-	await userService.connectUser(ctx)
+export async function convoMiddleware(ctx: MyContext, next: NextFunction) {
+	const activeConversations = ctx.conversation.active()
 
-	return next()
-}
+	// Проверяем, запущен ли сейчас у пользователя какой-то диалог
+	if (Object.keys(activeConversations).length > 0) {
+		if (ctx.hasCommand('cancel')) {
+			await ctx.reply('🚫 Action cancelled.')
+		} else {
+			await ctx.reply(
+				'🚫 Current action interrupted in favor of executing a new command.'
+			)
+		}
 
-export async function businessMiddleware(ctx: MyContext, next: () => Promise<void>) {
-	if (
-		!ctx.businessConnection &&
-		!ctx.businessMessage &&
-		!ctx.update?.business_connection
-	) {
-		return next()
+		await ctx.conversation.exitAll()
 	}
 
-	const conn = await ctx.getBusinessConnection().catch(() => undefined)
-	if (!conn) return next()
-
-	await userService.connectUser(ctx)
-
-	if (ctx.businessMessage) {
-		await msgService.touchMessage(ctx)
-	}
-
-	return next()
+	await next()
 }

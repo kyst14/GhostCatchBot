@@ -10,10 +10,10 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
-import type { Context } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 
 class ChatService {
-	async connectChat(ctx: Context) {
+	async connectChat(ctx: MyContext) {
 		const conn = await ctx.getBusinessConnection()
 		if (!conn || !ctx.businessMessage) return
 		return await prisma.chat.upsert({

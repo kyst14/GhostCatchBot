@@ -10,8 +10,9 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
-import { Bot, Context } from 'grammy'
+import { Bot } from 'grammy'
 import { randomBytes } from 'node:crypto'
+import type { MyContext } from './bot/lib/bot.js'
 
 const BOT_TOKEN = process.env.BOT_TOKEN!
 
@@ -29,7 +30,7 @@ const shouldStop = new Promise<void>(resolve => {
 	stop = resolve
 })
 
-const initOwner = async (ctx: Context) => {
+const initOwner = async (ctx: MyContext) => {
 	if (!ctx.from) return false
 	const user = await prisma.user.findUnique({
 		where: { role: 'OWNER' },
@@ -102,9 +103,11 @@ async function main() {
 		console.clear()
 		console.log('\n'.repeat(process.stdout.rows / 2 - 1))
 		console.log(`👤 To set you as owner, follow this link: ${link}`)
-		console.log(`🕒 ${
-			((endTimer - Date.now()) / 1000).toFixed(1).padStart(4, '0')
-		} seconds left`)
+		console.log(
+			`🕒 ${((endTimer - Date.now()) / 1000)
+				.toFixed(1)
+				.padStart(4, '0')} seconds left`
+		)
 	}, 100)
 
 	await shouldStop.then(async () => {
@@ -113,7 +116,6 @@ async function main() {
 		await bot.stop()
 		process.exit(0)
 	})
-
 }
 
 process.on('SIGINT', async () => {

@@ -11,11 +11,11 @@ You should have received a copy of the GNU General Public License along with Foo
 
 import prisma from '@/db/db.js'
 import { decryptText } from '@/utils/encryption.js'
-import type { Context } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 import { privacyCommand } from './privacy.js'
 
-export async function startCommand(ctx: Context) {
-	const chatId = ctx.match?.toString().replace('bizChat', '') || ctx.match?.toString();
+export async function startCommand(ctx: MyContext) {
+	const chatId = ctx.match?.toString().replace('bizChat', '') || ctx.match?.toString()
 
 	if (chatId && ctx.message) {
 		const loading = await ctx.reply('𝙇𝙤𝙖𝙙𝙞𝙣𝙜...') // loading

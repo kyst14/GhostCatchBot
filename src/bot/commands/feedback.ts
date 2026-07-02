@@ -9,16 +9,40 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { Context } from 'grammy'
+import { InlineKeyboard } from 'grammy'
+import { OWN_ID, type MyContext, type MyConversation } from '../lib/bot.js'
 
-export async function feedbackCommand(ctx: Context) {
-	return await ctx.reply(
-		`📨 Write your feedback here replying to this message. It will be sent to the admin.`,
-		{
-			reply_markup: {
-				force_reply: true,
-				input_field_placeholder: 'Write your feedback...',
-			},
-		}
-	)
+export async function feedbackCommand(conversation: MyConversation, ctx: MyContext) {
+	await ctx.reply('📨 Write your feedback. It will be sent to the admin. \nSend /cancel to cancel.')
+
+	const ctx0 = await conversation.wait()
+
+    if (ctx0.hasCommand("cancel")) {
+        await ctx0.reply("🚫 Feedback cancelled.")
+        return
+    }
+
+    if (!ctx0.message) return
+
+    await ctx.api.sendMessage(
+        OWN_ID,
+        `📨 <b>Feedback from user @${ctx.from?.username} (${ctx.from?.id})</b>\n\n`,
+        {
+            parse_mode: "HTML",
+        }
+    )
+
+    await ctx.api.copyMessage(
+        OWN_ID,
+        ctx.from!.id,
+        ctx0.message.message_id,
+        {
+            reply_markup: new InlineKeyboard().text(
+                "✏️ Reply",
+                `reply_to:${ctx.from!.id}`
+            ),
+        }
+    )
+
+    await ctx0.reply("✅ Thanks for your feedback!")
 }

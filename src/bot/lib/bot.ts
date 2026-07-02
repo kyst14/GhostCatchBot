@@ -10,7 +10,8 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
-import { Bot } from 'grammy'
+import type { Conversation, ConversationFlavor } from '@grammyjs/conversations'
+import { Bot, Context, type SessionFlavor } from 'grammy'
 
 export const isDev = process.env.NODE_ENV !== 'production'
 
@@ -30,6 +31,15 @@ if (!BOT_TOKEN) {
 	throw new Error('Owner is not defined in the database. Please run `npm/bun run seed-owner`')
 }
 
-export const bot = new Bot(BOT_TOKEN)
+interface SessionData {
+	user: {
+		lang: string
+	}
+}
+
+export type MyContext = Context & SessionFlavor<SessionData> & ConversationFlavor<Context>;
+export type MyConversation = Conversation<MyContext, MyContext>;
+
+export const bot = new Bot<ConversationFlavor<MyContext>>(BOT_TOKEN)
 
 export default bot

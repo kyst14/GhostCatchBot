@@ -10,18 +10,17 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
-import type { Context } from 'grammy'
 import type { BusinessConnection } from 'grammy/types'
-import { OWN_ID } from '../lib/bot.js'
+import { OWN_ID, type MyContext } from '../lib/bot.js'
 
 export class UserService {
-	async isOwner(ctx: Context) {
+	async isOwner(ctx: MyContext) {
 		if (!ctx.from) return false
 
 		return ctx.from.id === OWN_ID
 	}
 
-	async isAdmin(ctx: Context) {
+	async isAdmin(ctx: MyContext) {
 		if (!ctx.from) return false
 
 		prisma.user
@@ -35,7 +34,7 @@ export class UserService {
 			})
 	}
 
-	async connectUser(ctx: Context) {
+	async connectUser(ctx: MyContext) {
 		if (!ctx.from || !ctx.chat) return
 
 		let conn: BusinessConnection | undefined = undefined
