@@ -10,9 +10,9 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
-import type { Context } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 
-export async function handleBusinessConnection(ctx: Context) {
+export async function handleBusinessConnection(ctx: MyContext) {
 	const conn = ctx.businessConnection
 	if (!conn) return
 
@@ -40,7 +40,7 @@ export async function handleBusinessConnection(ctx: Context) {
 				id: conn.user.id,
 			},
 			data: {
-				connId: '',
+				connId: null,
 			},
 		})
 	}

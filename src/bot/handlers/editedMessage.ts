@@ -11,12 +11,11 @@ You should have received a copy of the GNU General Public License along with Foo
 
 import prisma from '@/db/db.js'
 import { decryptText, encryptText } from '@/utils/encryption.js'
-import type { Context } from 'grammy'
 import { escape } from 'html-escaper'
-import bot from '../lib/bot.js'
+import bot, { type MyContext } from '../lib/bot.js'
 import statsService from '../services/statsService.js'
 
-export async function handleEditedMessage(ctx: Context) {
+export async function handleEditedMessage(ctx: MyContext) {
 	const msg = ctx.editedBusinessMessage!
 	const conn = await ctx.getBusinessConnection()
 	if (!msg.from || !conn) return

@@ -9,12 +9,13 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { InputFile, type Context } from 'grammy'
+import { InputFile } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 import msgService from '../services/messageService.js'
 import statsService from '../services/statsService.js'
 import tgService from '../services/telegramService.js'
 
-export async function handleBusinessMessage(ctx: Context) {
+export async function handleBusinessMessage(ctx: MyContext) {
 	if (!(await msgService.isOwn(ctx))) {
 		const msg = ctx.businessMessage!
 

@@ -9,12 +9,17 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { Context } from 'grammy'
-import chatService from '../services/chatService.js'
+import type { MyContext } from '../lib/bot.js'
 import msgService from '../services/messageService.js'
 import userService from '../services/userService.js'
 
-export async function businessMiddleware(ctx: Context, next: () => Promise<void>) {
+export async function mainMiddleware(ctx: MyContext, next: () => Promise<void>) {
+	await userService.connectUser(ctx)
+
+	return next()
+}
+
+export async function businessMiddleware(ctx: MyContext, next: () => Promise<void>) {
 	if (
 		!ctx.businessConnection &&
 		!ctx.businessMessage &&
@@ -26,8 +31,7 @@ export async function businessMiddleware(ctx: Context, next: () => Promise<void>
 	const conn = await ctx.getBusinessConnection().catch(() => undefined)
 	if (!conn) return next()
 
-	await userService.connectUser(conn)
-	await chatService.connectChat(ctx)
+	await userService.connectUser(ctx)
 
 	if (ctx.businessMessage) {
 		await msgService.touchMessage(ctx)

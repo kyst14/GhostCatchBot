@@ -11,23 +11,32 @@ You should have received a copy of the GNU General Public License along with Foo
 
 import 'dotenv/config'
 
+import { conversations, createConversation } from '@grammyjs/conversations'
 import { aboutCommand } from './commands/about.js'
 import { connectCommand } from './commands/connect.js'
 import { feedbackCommand } from './commands/feedback.js'
 import { helpCommand } from './commands/help.js'
+import { privacyCommand } from './commands/privacy.js'
 import { startCommand } from './commands/start.js'
 import { statsCommand } from './commands/stats.js'
 import { handleBusinessConnection } from './handlers/businessConnection.js'
 import { handleBusinessMessage } from './handlers/businessMessage.js'
 import { handleDeletedMessage } from './handlers/deletedMessage.js'
 import { handleEditedMessage } from './handlers/editedMessage.js'
-import {
-	handleFeedbackFlow,
-	handleFeedbackFlowCallback,
-} from './handlers/feedbackFlow.js'
-import bot, { ADMIN_ID, isDev, WEBHOOK } from './lib/bot.js'
-import { businessMiddleware } from './middleware/businessContext.js'
-import { privacyCommand } from './commands/privacy.js'
+import { handleFeedbackFlowCallback } from './handlers/feedbackFlow.js'
+import bot, { isDev, OWN_ID, WEBHOOK } from './lib/bot.js'
+import { businessMiddleware, mainMiddleware } from './middleware/middleware.js'
+import { convoMiddleware } from './middleware/convoMiddleware.js'
+
+// Conversations
+bot.use(conversations())
+
+bot.on("message:entities:bot_command", convoMiddleware)
+
+bot.use(createConversation(feedbackCommand))
+bot.use(createConversation(handleFeedbackFlowCallback))
+
+bot.use(mainMiddleware)
 
 bot.command('start', startCommand)
 bot.command('help', helpCommand)
@@ -37,11 +46,21 @@ bot.command('about', aboutCommand)
 bot.command('privacy', privacyCommand)
 
 // Feedback
-bot.command('feedback', feedbackCommand)
-bot.callbackQuery(/^reply_to:(\d+)$/, handleFeedbackFlowCallback)
-bot.on('message', handleFeedbackFlow)
+bot.command('feedback', async ctx => {
+	await ctx.conversation.enter('feedbackCommand')
+})
+bot.callbackQuery(/^reply_to:(\d+)$/, async ctx => {
+	await ctx.conversation.enter('handleFeedbackFlowCallback', ctx.match?.[1])
+})
 
-bot.use(businessMiddleware)
+bot.use().filter(
+	ctx =>
+		ctx.has('business_connection') ||
+		ctx.has('business_message') ||
+		ctx.has('edited_business_message') ||
+		ctx.has('deleted_business_messages'),
+	businessMiddleware
+)
 
 // Catch Business connection
 bot.on('business_connection', handleBusinessConnection)
@@ -60,7 +79,7 @@ function onError(err: Error) {
 		console.error('❌ Uncaught Exception:', err)
 		process.exit(1)
 	} else {
-		bot.api.sendMessage(ADMIN_ID, `❌ Uncaught Exception: ${err.message}`)
+		bot.api.sendMessage(OWN_ID, `❌ Uncaught Exception: ${err.message}`)
 	}
 }
 

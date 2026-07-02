@@ -9,9 +9,9 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { Context } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 
-export async function aboutCommand(ctx: Context) {
+export async function aboutCommand(ctx: MyContext) {
 	return await ctx.reply(
 		`🤖 <b>Ghost Catch Bot</b>\n\n` +
 			`This bot helps you save and track deleted & edited Telegram messages and save protected media.\n\n` +

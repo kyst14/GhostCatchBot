@@ -9,89 +9,25 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { InlineKeyboard, type Context, type NextFunction } from 'grammy'
-import { ADMIN_ID } from '../lib/bot.js'
+import bot, { OWN_ID, type MyContext, type MyConversation } from '../lib/bot.js'
 
-export async function handleFeedbackFlow(ctx: Context, next: NextFunction) {
-	const replyTo = ctx.message?.reply_to_message
-
-	if (!replyTo) return await next()
-
-	const replyText = replyTo.text || ''
-
-	// --- ADMIN ---
-	if (ctx.from?.id === ADMIN_ID) {
-		const match = replyText.match(/ID:\s*(\d+)/)
-
-		if (match) {
-			const userId = match[1] || ''
-
-			try {
-				await ctx.api.sendMessage(userId, `📨 <b>Message from admin:</b>`, {
-					parse_mode: 'HTML',
-				})
-				await ctx.api.copyMessage(
-					userId,
-					ctx.message.chat.id,
-					ctx.message.message_id
-				)
-				return await ctx.reply('✅ Reply sended successfully to the user!')
-			} catch (err) {
-				console.error(err)
-				return await ctx.reply(
-					'❌ Failed to send reply to the user. Probably the user has blocked the bot.'
-				)
-			}
-		}
-	}
-
-	// --- USER FEEDBACK ---
-	const isOfficialFeedbackRequest = replyText.includes(
-		'Write your feedback here replying to this message'
-	)
-
-	if (isOfficialFeedbackRequest) {
-		try {
-			const keyboard = new InlineKeyboard().text(
-				'✏️ Reply',
-				`reply_to:${ctx.from?.id}`
-			)
-
-			await ctx.api.sendMessage(
-				ADMIN_ID,
-				`📨 <b>Message from @${ctx.from?.username || ctx.from?.first_name}:</b>`,
-				{ parse_mode: 'HTML' }
-			)
-
-			await ctx.api.copyMessage(
-				ADMIN_ID,
-				ctx.message.chat.id,
-				ctx.message.message_id,
-				{ reply_markup: keyboard }
-			)
-
-			ctx.react('❤')
-
-			return await ctx.reply('👍 Thank you! Your message was sended to admin!')
-		} catch (err) {
-			console.error(err)
-			return await ctx.reply('❌ Failed to send message to the admin.')
-		}
-	}
-}
-
-export async function handleFeedbackFlowCallback(ctx: Context) {
-	const userId = ctx.match?.[1]
-	if (!userId) return
-
+export async function handleFeedbackFlowCallback(
+	conversation: MyConversation,
+	ctx: MyContext,
+	userId: number | string,
+) {
 	await ctx.answerCallbackQuery()
-	await ctx.reply(
-		`📨 Write your answer (ID: ${userId}). It will be sent to the user.`,
+
+	await ctx.reply(`📨 Write your answer. It will be sent to the user (${userId}).`)
+
+	const { message } = await conversation.waitFor('message')
+
+	await bot.api.sendMessage(
+		userId,
+		`📨 <b>Answer from admin</b>\n\n`,
 		{
-			reply_markup: {
-				force_reply: true,
-				input_field_placeholder: 'Write your answer...',
-			},
+			parse_mode: 'HTML',
 		}
 	)
+	await bot.api.copyMessage(userId, OWN_ID, message.message_id)
 }

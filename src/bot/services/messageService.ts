@@ -12,8 +12,8 @@ You should have received a copy of the GNU General Public License along with Foo
 import prisma from '@/db/db.js'
 import { encryptText } from '@/utils/encryption.js'
 import type { MessageType } from '@prisma/client'
-import type { Context } from 'grammy'
 import type { Message } from 'grammy/types'
+import type { MyContext } from '../lib/bot.js'
 
 interface Media<Type extends string = MessageType> {
 	type: Type
@@ -21,7 +21,7 @@ interface Media<Type extends string = MessageType> {
 }
 
 class messageService {
-	async saveBusinessMessage(ctx: Context, msg: Message, media: Media) {
+	async saveBusinessMessage(ctx: MyContext, msg: Message, media: Media) {
 		const encrypted =
 			media.type === 'TEXT'
 				? encryptText(media.content)
@@ -131,7 +131,7 @@ class messageService {
 		return null
 	}
 
-	async touchMessage(ctx: Context) {
+	async touchMessage(ctx: MyContext) {
 		if (!ctx.businessMessage) return
 		const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
 
@@ -148,7 +148,7 @@ class messageService {
 		})
 	}
 
-	async isOwn(ctx: Context): Promise<boolean> {
+	async isOwn(ctx: MyContext): Promise<boolean> {
 		const conn = await ctx.getBusinessConnection()
 		const user = conn.user
 

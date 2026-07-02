@@ -12,16 +12,15 @@ You should have received a copy of the GNU General Public License along with Foo
 import prisma from '@/db/db.js'
 import { decryptText } from '@/utils/encryption.js'
 import type { Message } from '@prisma/client'
-import type { Context } from 'grammy'
 import { escape } from 'html-escaper'
-import bot from '../lib/bot.js'
+import bot, { type MyContext } from '../lib/bot.js'
 import statsService from '../services/statsService.js'
 import tgService from '../services/telegramService.js'
 
 const MAX_RETRY_TIME = 5000 // 5s
 const RETRY_INTERVAL = 500 // 500ms
 
-export async function handleDeletedMessage(ctx: Context) {
+export async function handleDeletedMessage(ctx: MyContext) {
 	const deleted = ctx.deletedBusinessMessages!
 
 	for (const msgId of deleted.message_ids) {

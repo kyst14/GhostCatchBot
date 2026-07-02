@@ -9,9 +9,9 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { Context } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 
-export async function connectCommand(ctx: Context) {
+export async function connectCommand(ctx: MyContext) {
 	return await ctx.reply(
 		`❓ Connect the bot to your Business account:\n\n
 			1. Click "🔌 Connect" button

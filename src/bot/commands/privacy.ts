@@ -9,7 +9,7 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { Context } from 'grammy'
+import type { MyContext } from '../lib/bot.js'
 
 function isUrlValid(url: string) {
 	try {
@@ -29,7 +29,7 @@ if (!linkPrivacy) {
 	console.warn('❌ LINK_PRIVACY is not defined or is not a valid URL. Ignoring...')
 }
 
-export async function privacyCommand(ctx: Context) {
+export async function privacyCommand(ctx: MyContext) {
 	if (!linkPrivacy) {
 		return ctx.reply('Privacy Policy is not configured yet.')
 	}
