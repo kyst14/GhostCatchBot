@@ -17,6 +17,7 @@ export async function helpCommand(ctx: MyContext) {
 			`Here are the available commands:\n` +
 			`- /start: Get started with the bot\n` +
 			`- /help: Show this help message\n` +
+			`- /about: Show information about the bot and contacts\n` +
 			`- /connect: Help connect the bot to your Business account\n` +
 			`- /feedback: Provide feedback about the bot\n` +
 			`- /stats: Show your message statistics\n\n` +
