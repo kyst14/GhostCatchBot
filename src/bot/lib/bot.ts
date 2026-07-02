@@ -11,15 +11,18 @@ You should have received a copy of the GNU General Public License along with Foo
 
 import prisma from '@/db/db.js'
 import type { Conversation, ConversationFlavor } from '@grammyjs/conversations'
+import type { Role } from '@prisma/client'
 import { Bot, Context, type SessionFlavor } from 'grammy'
 
 export const isDev = process.env.NODE_ENV !== 'production'
 
 export const BOT_TOKEN = process.env.BOT_TOKEN
-export const OWN_ID = await prisma.user.findFirst({
-	where: { role: 'OWNER' },
-	select: { id: true },
-}).then((user) => user?.id ? Number(user.id) : -1)
+export const OWN_ID = await prisma.user
+	.findFirst({
+		where: { role: 'OWNER' },
+		select: { id: true },
+	})
+	.then(user => (user?.id ? Number(user.id) : -1))
 export const WEBHOOK: URL | null =
 	!isDev && process.env.WEBHOOK_SECRET && process.env.BASE_URL
 		? new URL(process.env.WEBHOOK_SECRET, process.env.BASE_URL)
@@ -27,18 +30,20 @@ export const WEBHOOK: URL | null =
 
 if (!BOT_TOKEN) {
 	throw new Error('BOT_TOKEN is not defined')
-} else if (OWN_ID === -1) { // If OWN_ID is not found in the database
-	throw new Error('Owner is not defined in the database. Please run `npm/bun run seed-owner`')
+} else if (OWN_ID === -1) {
+	// If OWN_ID is not found in the database
+	throw new Error(
+		'Owner is not defined in the database. Please run `npm/bun run seed-owner`'
+	)
 }
 
 interface SessionData {
-	user: {
-		lang: string
-	}
+	role: Role
+	lang: string
 }
 
-export type MyContext = Context & SessionFlavor<SessionData> & ConversationFlavor<Context>;
-export type MyConversation = Conversation<MyContext, MyContext>;
+export type MyContext = Context & SessionFlavor<SessionData> & ConversationFlavor<Context>
+export type MyConversation = Conversation<MyContext, MyContext>
 
 export const bot = new Bot<ConversationFlavor<MyContext>>(BOT_TOKEN)
 

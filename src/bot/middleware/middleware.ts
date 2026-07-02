@@ -14,7 +14,9 @@ import msgService from '../services/messageService.js'
 import userService from '../services/userService.js'
 
 export async function mainMiddleware(ctx: MyContext, next: () => Promise<void>) {
-	await userService.connectUser(ctx)
+	const user = await userService.connectUser(ctx)
+
+	ctx.session.role = user.role
 
 	return next()
 }

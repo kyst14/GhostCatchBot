@@ -9,24 +9,16 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
+import type { NextFunction } from 'grammy'
 import type { MyContext } from '../lib/bot.js'
-import { commands } from '../config/commands.js'
+import userService from '@/bot/services/userService.js'
 
-export async function helpCommand(ctx: MyContext) {
-	const userRole = ctx.session.role
+export async function AdminMiddleware(ctx: MyContext, next: NextFunction) {
+	if (!ctx.from?.id) return next()
 
-	const userCommands = commands[userRole]
-
-	return await ctx.reply(
-		`I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
-			`Here are the available commands:\n` +
-
-			userCommands.map((cmd) => ` /${cmd.command} - ${cmd.description}`).join('\n') +
-
-			`\n\n` +
-			`Features:\n` +
-			`- View deleted messages in Business chats\n` +
-			`- View edited messages in Business chats\n` +
-			`- Save ephemeral media in private chats (reply to a protected message with media to save it)`
-	)
+	if (await userService.isAdmin(ctx)) {
+		await next()
+	} else {
+		await ctx.reply('🚫 You are not authorized to use this command.')
+	}
 }
