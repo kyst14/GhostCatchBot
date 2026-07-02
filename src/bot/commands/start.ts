@@ -57,7 +57,13 @@ export async function startCommand(ctx: MyContext) {
 				},
 			})
 
-			const username = decryptText(msg?.senderName || '') || 'Unknown'
+			const username = (() => {
+			  try {
+			    return decryptText(msg?.senderName || '');
+			  } catch {
+			    return 'Unknown';
+			  }
+			})();
 
 			await ctx.deleteMessages([loading.message_id])
 			return await ctx.reply(
