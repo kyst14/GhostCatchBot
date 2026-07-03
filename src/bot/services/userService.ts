@@ -10,33 +10,36 @@ You should have received a copy of the GNU General Public License along with Foo
 */
 
 import prisma from '@/db/db.js'
+import type { Role } from '@prisma/client'
 import type { BusinessConnection } from 'grammy/types'
 import { OWN_ID, type MyContext } from '../lib/bot.js'
 
 export class UserService {
-	async isOwner(ctx: MyContext) {
-		if (!ctx.from) return false
-
-		return ctx.from.id === OWN_ID
+	isOwner(ctx: MyContext): boolean {
+		return ctx.session.role === 'OWNER'
 	}
 
-	async isAdmin(ctx: MyContext) {
-		if (!ctx.from) return false
+	isAdmin(ctx: MyContext): boolean {
+		return ['ADMIN', 'OWNER'].includes(ctx.session.role)
+	}
 
-		prisma.user
-			.findUnique({
-				where: { id: ctx.from.id },
-				select: { role: true },
-			})
-			.then(user => {
-				if (user && ['ADMIN', 'OWNER'].includes(user.role)) return true
-				return false
-			})
+	getRole(ctx: MyContext): Role {
+		return ctx.session.role
+	}
+
+	async loadRole(ctx: MyContext): Promise<Role> {
+		if (!ctx.from) return 'USER'
+		if (ctx.from.id === OWN_ID) return 'OWNER'
+
+		const user = await prisma.user.findUnique({
+			where: { id: ctx.from.id },
+			select: { role: true },
+		})
+
+		return user?.role ?? 'USER'
 	}
 
 	async connectUser(ctx: MyContext) {
-		if (!ctx.from || !ctx.chat) return
-
 		let conn: BusinessConnection | undefined = undefined
 
 		// Business connection
@@ -48,12 +51,13 @@ export class UserService {
 			conn = await ctx.getBusinessConnection()
 		}
 
-		const id = conn?.user.id ?? ctx.from.id
+		const id = conn?.user.id ?? ctx.from!.id
 		const username =
 			conn?.user.username ??
 			conn?.user.first_name ??
-			ctx.from.username ??
-			ctx.from.first_name
+			ctx.from?.username ??
+			ctx.from?.first_name ??
+			'Unknown'
 		const connId = conn?.id || null
 
 		return prisma.user.upsert({

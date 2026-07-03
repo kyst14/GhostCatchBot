@@ -9,21 +9,42 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { commands } from '../config/commands.js'
 import type { MyContext } from '../lib/bot.js'
+import userService from '../services/userService.js'
 
 export async function helpCommand(ctx: MyContext) {
-	return await ctx.reply(
+	const userCommands = commands.USER
+		.map(c => `/${c.command} - ${c.description}`)
+		.join('\n')
+
+	const adminCommands =
+		userService.isAdmin(ctx)
+			? commands.ADMIN
+					.map(c => `/${c.command} - ${c.description}`)
+					.join('\n')
+			: ''
+
+	const ownerCommands =
+		userService.isOwner(ctx)
+			? commands.OWNER
+					.map(c => `/${c.command} - ${c.description}`)
+					.join('\n')
+			: ''
+
+	console.log('User commands:', adminCommands)
+	console.log('Owner commands:', ownerCommands)
+
+	const text =
 		`I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
-			`Here are the available commands:\n` +
-			`- /start: Get started with the bot\n` +
-			`- /help: Show this help message\n` +
-			`- /about: Show information about the bot and contacts\n` +
-			`- /connect: Help connect the bot to your Business account\n` +
-			`- /feedback: Provide feedback about the bot\n` +
-			`- /stats: Show your message statistics\n\n` +
-			`Features:\n` +
-			`- View deleted messages in Business chats\n` +
-			`- View edited messages in Business chats\n` +
-			`- Save ephemeral media in private chats (reply to a protected message with media to save it)`
-	)
+		`📋 Available commands:\n` +
+		userCommands +
+		(adminCommands ? `\n\n🛠 Admin commands:\n${adminCommands}` : '') +
+		(ownerCommands ? `\n\n👑 Owner commands:\n${ownerCommands}` : '') +
+		`\n\nFeatures:\n` +
+		`- View deleted messages in Business chats\n` +
+		`- View edited messages in Business chats\n` +
+		`- Save ephemeral media in private chats (reply to a protected message with media to save it)`
+
+	return ctx.reply(text)
 }

@@ -27,8 +27,13 @@ import { handleFeedbackFlowCallback } from './handlers/feedbackFlow.js'
 import bot, { isDev, OWN_ID, WEBHOOK } from './lib/bot.js'
 import { businessMiddleware, mainMiddleware } from './middleware/middleware.js'
 import { convoMiddleware } from './middleware/convoMiddleware.js'
+import { session } from 'grammy'
 
 // Conversations
+
+// Middleware
+bot.use(session({ initial: () => ({}) }))
+bot.use(mainMiddleware)
 bot.use(conversations())
 
 bot.on("message:entities:bot_command", convoMiddleware)
@@ -36,7 +41,6 @@ bot.on("message:entities:bot_command", convoMiddleware)
 bot.use(createConversation(feedbackCommand))
 bot.use(createConversation(handleFeedbackFlowCallback))
 
-bot.use(mainMiddleware)
 
 bot.command('start', startCommand)
 bot.command('help', helpCommand)
@@ -75,7 +79,7 @@ bot.on('edited_business_message:text', handleEditedMessage)
 bot.on('deleted_business_messages', handleDeletedMessage)
 
 function onError(err: Error) {
-	if (isDev) {
+	if (!isDev) {
 		console.error('❌ Uncaught Exception:', err)
 		process.exit(1)
 	} else {

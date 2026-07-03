@@ -9,35 +9,16 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
+import type { NextFunction } from 'grammy'
 import type { MyContext } from '../lib/bot.js'
-import msgService from '../services/messageService.js'
-import userService from '../services/userService.js'
+import userService from '@/bot/services/userService.js'
 
-export async function mainMiddleware(ctx: MyContext, next: () => Promise<void>) {
-	const user = await userService.connectUser(ctx)
+export async function AdminMiddleware(ctx: MyContext, next: NextFunction) {
+	if (!ctx.from?.id) return next()
 
-	ctx.session.role = user.role
-
-	return next()
-}
-
-export async function businessMiddleware(ctx: MyContext, next: () => Promise<void>) {
-	if (
-		!ctx.businessConnection &&
-		!ctx.businessMessage &&
-		!ctx.update?.business_connection
-	) {
-		return next()
+	if (await userService.isAdmin(ctx)) {
+		await next()
+	} else {
+		await ctx.reply('🚫 You are not authorized to use this command.')
 	}
-
-	const conn = await ctx.getBusinessConnection().catch(() => undefined)
-	if (!conn) return next()
-
-	await userService.connectUser(ctx)
-
-	if (ctx.businessMessage) {
-		await msgService.touchMessage(ctx)
-	}
-
-	return next()
 }
