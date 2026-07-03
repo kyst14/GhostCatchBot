@@ -110,16 +110,14 @@ export const commandsList: BotCommand[] = [
 		command: 'admins',
 		description: 'List all administrators.',
 		role: 'OWNER',
-		// hidden: true,
+		hidden: true,
 	},
 ]
 
 export const commands: Record<Role, BotCommand[]> = {
 	USER: commandsList.filter(c => !c.hidden && c.role === 'USER'),
 
-	ADMIN: commandsList.filter(
-		c => !c.hidden && (c.role === 'USER' || c.role === 'ADMIN')
-	),
+	ADMIN: commandsList.filter(c => !c.hidden && c.role === 'ADMIN'),
 
-	OWNER: commandsList.filter(c => !c.hidden),
+	OWNER: commandsList.filter(c => !c.hidden && c.role === 'OWNER'),
 }

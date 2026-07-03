@@ -9,24 +9,42 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { MyContext } from '../lib/bot.js'
 import { commands } from '../config/commands.js'
+import type { MyContext } from '../lib/bot.js'
+import userService from '../services/userService.js'
 
 export async function helpCommand(ctx: MyContext) {
-	const userRole = ctx.session.role
+	const userCommands = commands.USER
+		.map(c => `/${c.command} - ${c.description}`)
+		.join('\n')
 
-	const userCommands = commands[userRole]
+	const adminCommands =
+		userService.isAdmin(ctx)
+			? commands.ADMIN
+					.map(c => `/${c.command} - ${c.description}`)
+					.join('\n')
+			: ''
 
-	return await ctx.reply(
+	const ownerCommands =
+		userService.isOwner(ctx)
+			? commands.OWNER
+					.map(c => `/${c.command} - ${c.description}`)
+					.join('\n')
+			: ''
+
+	console.log('User commands:', adminCommands)
+	console.log('Owner commands:', ownerCommands)
+
+	const text =
 		`I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
-			`Here are the available commands:\n` +
+		`📋 Available commands:\n` +
+		userCommands +
+		(adminCommands ? `\n\n🛠 Admin commands:\n${adminCommands}` : '') +
+		(ownerCommands ? `\n\n👑 Owner commands:\n${ownerCommands}` : '') +
+		`\n\nFeatures:\n` +
+		`- View deleted messages in Business chats\n` +
+		`- View edited messages in Business chats\n` +
+		`- Save ephemeral media in private chats (reply to a protected message with media to save it)`
 
-			userCommands.map((cmd) => ` /${cmd.command} - ${cmd.description}`).join('\n') +
-
-			`\n\n` +
-			`Features:\n` +
-			`- View deleted messages in Business chats\n` +
-			`- View edited messages in Business chats\n` +
-			`- Save ephemeral media in private chats (reply to a protected message with media to save it)`
-	)
+	return ctx.reply(text)
 }

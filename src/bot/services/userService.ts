@@ -19,11 +19,11 @@ export class UserService {
 		return ctx.session.role === 'OWNER'
 	}
 
-	async isAdmin(ctx: MyContext): Promise<boolean> {
+	isAdmin(ctx: MyContext): boolean {
 		return ['ADMIN', 'OWNER'].includes(ctx.session.role)
 	}
 
-	async getRole(ctx: MyContext): Promise<Role> {
+	getRole(ctx: MyContext): Role {
 		return ctx.session.role
 	}
 
