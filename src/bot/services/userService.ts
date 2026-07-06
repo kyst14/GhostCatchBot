@@ -51,13 +51,13 @@ export class UserService {
 			conn = await ctx.getBusinessConnection()
 		}
 
-		const id = conn?.user.id ?? ctx.from!.id
+		const user = conn?.user ?? ctx.from;
+		if (!user) return
+
+		const id = user.id
 		const username =
-			conn?.user.username ??
-			conn?.user.first_name ??
-			ctx.from?.username ??
-			ctx.from?.first_name ??
-			'Unknown'
+			user.username ??
+			user.first_name
 		const connId = conn?.id || null
 
 		return prisma.user.upsert({
