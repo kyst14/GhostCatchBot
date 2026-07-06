@@ -28,6 +28,7 @@ import bot, { isDev, OWN_ID, WEBHOOK } from './lib/bot.js'
 import { businessMiddleware, mainMiddleware } from './middleware/middleware.js'
 import { convoMiddleware } from './middleware/convoMiddleware.js'
 import { session } from 'grammy'
+import AdminComposer from './admin/middleware.js'
 
 // Conversations
 
@@ -38,18 +39,17 @@ bot.use(conversations())
 
 bot.on("message:entities:bot_command", convoMiddleware)
 
+// Conversations
 bot.use(createConversation(feedbackCommand))
 bot.use(createConversation(handleFeedbackFlowCallback))
 
-
+// Commands
 bot.command('start', startCommand)
 bot.command('help', helpCommand)
 bot.command('connect', connectCommand)
 bot.command('stats', statsCommand)
 bot.command('about', aboutCommand)
 bot.command('privacy', privacyCommand)
-
-// Feedback
 bot.command('feedback', async ctx => {
 	await ctx.conversation.enter('feedbackCommand')
 })
@@ -57,6 +57,10 @@ bot.callbackQuery(/^reply_to:(\d+)$/, async ctx => {
 	await ctx.conversation.enter('handleFeedbackFlowCallback', ctx.match?.[1])
 })
 
+// Admin commands
+bot.use(AdminComposer)
+
+// Business
 bot.use().filter(
 	ctx =>
 		ctx.has('business_connection') ||
@@ -79,7 +83,8 @@ bot.on('edited_business_message:text', handleEditedMessage)
 bot.on('deleted_business_messages', handleDeletedMessage)
 
 function onError(err: Error) {
-	if (!isDev) {
+	if (isDev) {
+		bot.api.sendMessage(OWN_ID, `❌ Uncaught Exception: ${err.message}`)
 		console.error('❌ Uncaught Exception:', err)
 		process.exit(1)
 	} else {

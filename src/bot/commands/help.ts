@@ -15,25 +15,22 @@ import userService from '../services/userService.js'
 
 export async function helpCommand(ctx: MyContext) {
 	const userCommands = commands.USER
-		.map(c => `/${c.command} - ${c.description}`)
+		.map(c => `/${c.name} - ${c.description}`)
 		.join('\n')
 
 	const adminCommands =
 		userService.isAdmin(ctx)
 			? commands.ADMIN
-					.map(c => `/${c.command} - ${c.description}`)
+					.map(c => `/${c.name} - ${c.description}`)
 					.join('\n')
 			: ''
 
 	const ownerCommands =
 		userService.isOwner(ctx)
 			? commands.OWNER
-					.map(c => `/${c.command} - ${c.description}`)
+					.map(c => `/${c.name} - ${c.description}`)
 					.join('\n')
 			: ''
-
-	console.log('User commands:', adminCommands)
-	console.log('Owner commands:', ownerCommands)
 
 	const text =
 		`I'm a bot that helps you save and view deleted and edited messages from your Telegram account.\n\n` +
