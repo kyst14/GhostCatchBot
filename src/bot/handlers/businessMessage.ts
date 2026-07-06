@@ -14,6 +14,7 @@ import type { MyContext } from '../lib/bot.js'
 import msgService from '../services/messageService.js'
 import statsService from '../services/statsService.js'
 import tgService from '../services/telegramService.js'
+import chatService from '../services/chatService.js'
 
 export async function handleBusinessMessage(ctx: MyContext) {
 	if (!(await msgService.isOwn(ctx))) {
@@ -22,6 +23,7 @@ export async function handleBusinessMessage(ctx: MyContext) {
 		const media = msgService.extractMedia(msg)
 		if (!media) return
 
+		await chatService.connectChat(ctx)
 		return await msgService.saveBusinessMessage(ctx, msg, media)
 	} else if (
 		(await msgService.isOwn(ctx)) &&
