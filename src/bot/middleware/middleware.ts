@@ -15,6 +15,7 @@ import userService from '../services/userService.js'
 
 export async function mainMiddleware(ctx: MyContext, next: () => Promise<void>) {
 	const user = await userService.connectUser(ctx)
+	if (!user) return
 
 	ctx.session.role = user.role
 
