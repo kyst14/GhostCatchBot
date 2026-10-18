@@ -1,16 +1,13 @@
-/*
-Copyright (C) 2026 kyst14
-
-This file is part of Ghost Catch Bot.
-
-Ghost Catch Bot is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
-*/
+/**
+ * Copyright (C) 2026 kyst14
+ * This file is part of Ghost Catch Bot.
+ * Ghost Catch Bot is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ * Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["partialIndexes"]
 }
 
@@ -19,78 +16,75 @@ datasource db {
 }
 
 model User {
-  id                   BigInt           @id @unique
-  username             String
+  id       BigInt @id @unique
+  username String
 
-  connId               String?           @unique
+  connId String? @unique
 
-  role                 Role             @default(USER)
+  role Role @default(USER)
 
   // Statistics
-  messagesDeleted      Int              @default(0)
-  messagesEdited       Int              @default(0)
-  messagesProtected    Int              @default(0)
+  messagesDeleted   Int @default(0)
+  messagesEdited    Int @default(0)
+  messagesProtected Int @default(0)
 
-  chats                Chat[]           @relation("UserChats")
-  messages             Message[]
+  chats    Chat[]    @relation("UserChats")
+  messages Message[]
 
   @@unique([role], map: "only_one_owner", where: { role: "OWNER" })
 }
 
 enum Role {
-  USER      // just user
-  ADMIN     // mute/bun/browsing users
-  OWNER     // Can do anything
+  USER // just user
+  ADMIN // mute/bun/browsing users
+  OWNER // Can do anything
 }
 
 model Chat {
-  id                   String           @id @default(cuid())
-  
-  tgId                 BigInt
-  ownId                BigInt
+  id String @id @default(cuid())
+
+  tgId  BigInt
+  ownId BigInt
 
   // Statistics
-  messagesDeleted      Int              @default(0)
-  messagesEdited       Int              @default(0)
-  messagesProtected    Int              @default(0)
+  messagesDeleted   Int @default(0)
+  messagesEdited    Int @default(0)
+  messagesProtected Int @default(0)
 
-  lastAccessedAt       DateTime         @default(now())
-  expiresAt            DateTime
+  lastAccessedAt DateTime @default(now())
+  expiresAt      DateTime
 
-  own                  User             @relation("UserChats", fields: [ownId], references: [id], onDelete: Cascade)
-  messages             Message[]
-
-  @@index([tgId, ownId])
-  @@index([expiresAt])
+  own      User      @relation("UserChats", fields: [ownId], references: [id], onDelete: Cascade)
+  messages Message[]
 
   @@unique([tgId, ownId], name: "tgId_ownId")
+  @@index([tgId, ownId])
+  @@index([expiresAt])
 }
 
 model Message {
-  id                   Int              @id @default(autoincrement())
-  tgId                 BigInt
-  type                 MessageType
-  content              String
-  createdAt            DateTime         @default(now())
+  id        Int         @id @default(autoincrement())
+  tgId      BigInt
+  type      MessageType
+  content   String
+  createdAt DateTime    @default(now())
 
-  lastAccessedAt       DateTime         @default(now())
-  expiresAt            DateTime
+  lastAccessedAt DateTime @default(now())
+  expiresAt      DateTime
 
-  tgChatId             BigInt
-  ownId                BigInt
+  tgChatId BigInt
+  ownId    BigInt
 
-  senderName           String
+  senderName String
 
-  chat                 Chat             @relation(fields: [tgChatId, ownId], references: [tgId, ownId], onDelete: Cascade)
-  own                  User             @relation(fields: [ownId], references: [id])
+  chat Chat @relation(fields: [tgChatId, ownId], references: [tgId, ownId], onDelete: Cascade)
+  own  User @relation(fields: [ownId], references: [id])
 
+  @@unique([ownId, tgChatId, tgId], name: "own_tg_identity")
   @@index([ownId])
   @@index([tgId])
   @@index([expiresAt])
-
-  @@unique([ownId, tgChatId, tgId], name: "own_tg_identity")
 }
-
 
 enum MessageType {
   TEXT
@@ -102,4 +96,5 @@ enum MessageType {
   ANIMATION
   STICKER
   VIDEO_NOTE
+  UNDEFINED
 }
