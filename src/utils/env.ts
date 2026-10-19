@@ -47,8 +47,8 @@ export const env = {
   encryptionKey: required('ENCRYPTION_KEY'),
 } as const;
 
-if (env.encryptionKey.length < 32) {
-  throw new Error('ENCRYPTION_KEY must be at least 32 characters');
+if (env.encryptionKey.length !== 32) {
+  throw new Error('ENCRYPTION_KEY must be EXACTLY 32 characters');
 }
 
 if (env.webhookEnabled) {
