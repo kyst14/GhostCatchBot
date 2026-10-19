@@ -12,24 +12,40 @@ You should have received a copy of the GNU General Public License along with Foo
 import { prisma } from '@/db/db.js';
 import cron from 'node-cron';
 
+let isCleaning = false;
+
+export async function cleanup() {
+  if (isCleaning) {
+    console.log('⏳ Previous cleanup is still running, skipping...');
+    return;
+  }
+
+  isCleaning = true;
+  try {
+    console.log('🧹 Cleanup started');
+    const now = new Date();
+
+    const messages = await prisma.message.deleteMany({
+      where: { expiresAt: { lt: now } },
+    });
+
+    const chats = await prisma.chat.deleteMany({
+      where: { expiresAt: { lt: now } },
+    });
+
+    console.log(`✅ Cleanup done: ${messages.count} messages | ${chats.count} chats`);
+  } catch (err) {
+    console.error('❌ Cleanup cron failed:', err);
+  } finally {
+    isCleaning = false;
+  }
+}
+
 export function startCleanupJob() {
   console.log('📅 Cleanup cron registered');
 
   cron.schedule('0 * * * *', async () => {
     // every hour
-    try {
-      console.log('🧹 Cleanup started');
-
-      const now = new Date();
-
-      const [messages, chats] = await prisma.$transaction([
-        prisma.message.deleteMany({ where: { expiresAt: { lt: now } } }),
-        prisma.chat.deleteMany({ where: { expiresAt: { lt: now } } }),
-      ]);
-
-      console.log(`✅ Cleanup done: ${messages.count} messages | ${chats.count} chats`);
-    } catch (err) {
-      console.error('❌ Cleanup cron failed:', err);
-    }
+    await cleanup();
   });
 }
