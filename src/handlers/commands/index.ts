@@ -12,6 +12,7 @@ You should have received a copy of the GNU General Public License along with Foo
 import type { MyContext } from '@/bot/context.js';
 import type { Bot, CommandContext } from 'grammy';
 import { startCommand } from './start.js';
+import { connectCommand } from './connect.js';
 
 type CommandHandler = (ctx: CommandContext<MyContext>) => unknown;
 
@@ -24,6 +25,11 @@ type Command = {
 
 const commands: Command[] = [
   { name: 'start', description: 'Start/Restart the bot', handler: startCommand },
+  {
+    name: 'connect',
+    description: 'Help to connect the bot to your Business account',
+    handler: connectCommand,
+  },
 ];
 
 export function registerCommands(bot: Bot<MyContext>) {

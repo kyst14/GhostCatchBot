@@ -9,6 +9,7 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { registerCallbacks } from '@/handlers/callbacks/index.js';
 import { registerCommands } from '@/handlers/commands/index.js';
 import { env } from '@/utils/env.js';
 import { Bot } from 'grammy';
@@ -17,6 +18,7 @@ import type { UserFromGetMe } from 'grammy/types';
 export const bot = new Bot(env.botToken);
 
 registerCommands(bot);
+registerCallbacks(bot);
 
 export async function startBot() {
   console.log('🚀 Starting bot...');
