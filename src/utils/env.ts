@@ -19,19 +19,29 @@ function required(name: string): string {
   return value;
 }
 
+function optional(name: string, defaultValue: string): string {
+  const value = process.env[name];
+  if (!value) {
+    return defaultValue;
+  }
+  return value;
+}
+
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? 'development',
+  nodeEnv: optional('NODE_ENV', 'development'),
   isProd: process.env.NODE_ENV === 'production',
+
+  isVercel: process.env.VERCEL === '1',
 
   botToken: required('BOT_TOKEN'),
   ownId: BigInt(required('OWN_ID')),
 
-  port: Number(process.env.PORT ?? 3000),
-  host: process.env.HOST ?? '0.0.0.0',
+  port: Number(optional('PORT', '3000')),
+  host: optional('HOST', '0.0.0.0'),
 
-  baseUrl: process.env.BASE_URL ?? '',
-  webhookUrl: process.env.WEBHOOK_URL ?? '',
-  webhookSecret: process.env.WEBHOOK_SECRET ?? '',
+  webhookEnabled: optional('WEBHOOK_ENABLED', 'false').toLowerCase() === 'true',
+  baseUrl: optional('BASE_URL', '').replace(/\/$/, ''),
+  webhookSecret: optional('WEBHOOK_SECRET', ''),
 
   databaseUrl: required('DATABASE_URL'),
   encryptionKey: required('ENCRYPTION_KEY'),
@@ -40,3 +50,13 @@ export const env = {
 if (env.encryptionKey.length < 32) {
   throw new Error('ENCRYPTION_KEY must be at least 32 characters');
 }
+
+if (env.webhookEnabled) {
+  if (!env.baseUrl) throw new Error('BASE_URL is required when WEBHOOK_ENABLED=true');
+  if (!env.webhookSecret) throw new Error('WEBHOOK_SECRET is required when WEBHOOK_ENABLED=true');
+  if (env.webhookSecret.length < 32) {
+    throw new Error('WEBHOOK_SECRET must be at least 32 characters');
+  }
+}
+
+export default env;
