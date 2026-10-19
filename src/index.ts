@@ -9,30 +9,60 @@ Foobar is distributed in the hope that it will be useful, but WITHOUT ANY WARRAN
 You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { startBot } from '@/bot/index.js';
+import { bot, startBot } from '@/bot/index.js';
+import { startCleanupJob } from '@/utils/cron.js';
+import env from '@/utils/env.js';
 import express from 'express';
-import { startCleanupJob } from './utils/cron.js';
+import { webhookCallback } from 'grammy';
+import path from 'path';
 
 const app = express();
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-const __dirname = new URL('.', import.meta.url).pathname;
+const rootDir = process.cwd();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
-  //send site/index.html
-  res.status(200).sendFile('site/index.html', { root: __dirname });
+  res.status(200).sendFile(path.join(rootDir, 'site/index.html'));
 });
 
-app.listen(PORT, HOST, async () => {
-  console.log('🚀 Server started: ');
-
-  console.log('http://localhost:' + PORT);
-
-  startCleanupJob();
-  await startBot();
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    server: {
+      ok: true,
+      node: process.version,
+      uptime: process.uptime(),
+    },
+  });
 });
+
+if (env.webhookEnabled) {
+  app.use(
+    `/webhook/${env.botToken}`,
+    webhookCallback(bot, 'express', {
+      secretToken: env.webhookSecret,
+    }),
+  );
+}
+
+if (env.isVercel) {
+  console.log('Running on Vercel, starting bot...');
+
+  startBot();
+} else { 
+  // Start the server
+  app.listen(PORT, HOST, async () => {
+    console.log('🚀 Server started: ');
+
+    console.log('http://localhost:' + PORT);
+
+    startCleanupJob();
+    await startBot();
+  });
+}
+
+export default app;
