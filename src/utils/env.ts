@@ -43,12 +43,18 @@ export const env = {
   baseUrl: optional('BASE_URL', '').replace(/\/$/, ''),
   webhookSecret: optional('WEBHOOK_SECRET', ''),
 
+  indexKey: required('INDEX_KEY'),
+
   databaseUrl: required('DATABASE_URL'),
   encryptionKey: required('ENCRYPTION_KEY'),
 } as const;
 
 if (env.encryptionKey.length !== 64) {
   throw new Error('ENCRYPTION_KEY must be EXACTLY 64 characters');
+}
+
+if (env.indexKey.length !== 64) {
+  throw new Error('INDEX_KEY must be EXACTLY 64 characters');
 }
 
 if (env.webhookEnabled) {

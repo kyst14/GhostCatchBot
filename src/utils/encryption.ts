@@ -76,3 +76,6 @@ export function decrypt(
     throw new Error('Failed to decrypt. Wrong key or corrupted data.');
   }
 }
+
+export const blindIndex = (v: string) =>
+  createHmac('sha256', env.indexKey).update(v.trim().toLowerCase()).digest('hex');

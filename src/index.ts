@@ -15,6 +15,7 @@ import env from '@/utils/env.js';
 import express from 'express';
 import { webhookCallback } from 'grammy';
 import path from 'path';
+import db from './db/db.js';
 
 const app = express();
 
@@ -49,20 +50,20 @@ if (env.webhookEnabled) {
   );
 }
 
-if (env.isVercel) {
-  console.log('Running on Vercel, starting bot...');
+// Start the server
+app.listen(PORT, HOST, async () => {
+  console.log('🚀 Server started: ');
 
-  startBot();
-} else {
-  // Start the server
-  app.listen(PORT, HOST, async () => {
-    console.log('🚀 Server started: ');
+  console.log('http://localhost:' + PORT);
 
-    console.log('http://localhost:' + PORT);
-
-    startCleanupJob();
-    await startBot();
+  await db.$connect().then(() => {
+    console.log('✅ Database connected');
+  }).catch((err: Error) => {
+    console.error('❌ Database connection error:', err);
   });
-}
+  
+  startCleanupJob();
+  await startBot();
+});
 
 export default app;
